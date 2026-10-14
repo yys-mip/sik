@@ -61,6 +61,7 @@ textarea{resize:vertical;min-height:64px}
 .card h3{font-size:14.5px;margin-bottom:14px;color:var(--primary-dark);display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
 .card h3 .h3-actions{display:flex;gap:8px;flex-wrap:wrap}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:18px}
+.cards.compact{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
 .stat{background:#fff;border:1px solid var(--border);border-radius:13px;padding:16px 18px;border-left:4px solid var(--primary)}
 .stat.green{border-left-color:var(--green)}
 .stat.red{border-left-color:var(--red)}
@@ -69,10 +70,10 @@ textarea{resize:vertical;min-height:64px}
 .stat span{font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
 .stat strong{font-size:19px;color:var(--text);display:block;font-weight:700}
 .stat small{font-size:11px;color:#94a3b8;display:block;margin-top:4px}
-.stat.compact{padding:10px 12px;border-radius:10px}
-.stat.compact span{font-size:9.5px;margin-bottom:2px;letter-spacing:.2px}
-.stat.compact strong{font-size:14.5px}
-.cards.compact{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.stat.compact{padding:10px 12px;border-radius:10px;border-left-width:3px}
+.stat.compact span{font-size:9.5px;margin-bottom:3px;letter-spacing:.2px}
+.stat.compact strong{font-size:15px}
+.stat.compact small{font-size:10px;margin-top:2px}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
 .form-row{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
 .form-row label{font-size:12px;font-weight:600;color:var(--muted)}
@@ -126,7 +127,6 @@ table.tbl tbody tr:last-child td{border-bottom:none}
 .menu-tile .mt-ico{width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,#ccfbf1,#99f6e4);color:var(--primary-dark);display:flex;align-items:center;justify-content:center;font-size:22px}
 .menu-tile .mt-title{font-size:14px;font-weight:700;color:var(--text)}
 .menu-tile .mt-desc{font-size:11.5px;color:var(--muted);line-height:1.4}
-/* ===== Table Laporan Arus Kas (gaya gambar) ===== */
 table.tbl-kas{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:2px solid #000}
 table.tbl-kas th,table.tbl-kas td{border:1px solid #000;padding:6px 8px;vertical-align:middle}
 table.tbl-kas th{background:#fff;font-weight:700;text-align:center;font-size:12.5px;color:#000;text-transform:none;letter-spacing:0}
@@ -203,9 +203,9 @@ body.dark .tabs .tab-btn.active{background:var(--primary-light);color:#04302d}
 .kelas-chk{display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 8px;border:1px solid var(--border);border-radius:8px;background:#f8fafc;font-size:12.5px;font-weight:600}
 .kelas-chk input{width:auto;margin:0}
 body.dark .kelas-chk{background:#334155;border-color:#475569}
-.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
 .btn-row .btn{flex:0 0 auto}
-.btn-link{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;cursor:pointer;transition:.15s}
+.btn-link{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;cursor:pointer;transition:.15s}
 .btn-link:hover{background:#ddd6fe}
 body.dark .btn-link{background:#5b21b6;color:#ddd6fe;border-color:#7c3aed}
 </style>
@@ -233,7 +233,7 @@ body.dark .btn-link{background:#5b21b6;color:#ddd6fe;border-color:#7c3aed}
       <div><h2 id="sbTitle">Yayasan Mutiara Islam</h2><small id="sbSub">Prembun</small></div>
     </div>
     <nav class="sb-menu" id="sbMenu"></nav>
-    <div class="sb-foot">v3.9 &middot; Supabase Multi-DB</div>
+    <div class="sb-foot">v4.1 &middot; Supabase Multi-DB</div>
   </aside>
   <div id="main">
     <div id="topbar"></div>
@@ -279,7 +279,7 @@ function defaultDB(){return{users:{},settings:{
   tk:{nama:"Ma'had TK Mutiara Islam Prembun",alamat:'Prembun, Kebumen',ketua:'',bendahara:'',logo:'',npwp:''}
 },years:{yayasan:[],maba:[],sd:[],tk:[]},transaksi:[],events:[],eventTrans:[],permohonan:[],siswa:[],biaya:{sd:{},tk:{}},pembayaran:[],guru:[],gajiGuru:[],gajiPembayaran:[],kegiatan:[],kegiatanTrans:[],kegiatanPembayaran:[]};}
 let DB=defaultDB();
-let state={user:null,page:'dashboard',ctxUnit:'yayasan',eventId:null,setingView:null,kegiatanId:null,kegiatanView:'ringkasan',bendaharaEventId:null,loadedUnits:[]};
+let state={user:null,page:'dashboard',ctxUnit:'yayasan',eventId:null,eventView:'main',setingView:null,kegiatanId:null,kegiatanView:'ringkasan',bendaharaEventId:null,loadedUnits:[]};
 const FILTER={};let showPasswords=false;
 let googleState={accessToken:null,expiresAt:0,userEmail:null,clientId:localStorage.getItem(GCLIENT_KEY)||''};
 
@@ -481,7 +481,6 @@ table.data td.r,table.data th.r{text-align:right}
 table.data td.c,table.data th.c{text-align:center}
 table.data tbody tr:nth-child(even){background:#fafafa}
 table.data tfoot td{font-weight:700;background:#f1f5f9;border-top:2px solid #333}
-table.data tbody tr.tot-lap-kas td{font-weight:700;background:#f1f5f9;border-top:2px solid #333;font-size:11pt}
 .empty-row{text-align:center;color:#64748b;font-style:italic;padding:20px}
 .pengesahan{margin-top:30px;page-break-inside:avoid}
 .pengesahan .tanggal{text-align:right;margin-bottom:6px;font-size:11pt;padding-right:24px}
@@ -508,7 +507,7 @@ ${subtitle?`<div class="subtitle">${esc(subtitle)}</div>`:''}
   w.document.write(doc);w.document.close();
 }
 
-/* ============ CETAK PDF LAPORAN ARUS KAS (format khusus) ============ */
+/* ============ CETAK PDF LAPORAN ARUS KAS ============ */
 function cetakLaporanArusKasPDF(title, subtitle, items, unitOverride, opts){
   opts = opts || {};
   const w = window.open('','_blank'); if(!w){toast('Popup diblokir','error');return;}
@@ -518,7 +517,6 @@ function cetakLaporanArusKasPDF(title, subtitle, items, unitOverride, opts){
   let tglStr;
   if(opts.tanggal){const [y,m,d]=String(opts.tanggal).split('-');tglStr=`${Number(d)} ${BULAN[Number(m)-1]} ${y}`;}else{const n=new Date();tglStr=`${n.getDate()} ${BULAN[n.getMonth()]} ${n.getFullYear()}`;}
   const kota = opts.kota || 'Prembun';
-  // items: [{tgl, kategori, keterangan, masuk, keluar}]
   const tM = items.reduce((a,b)=>a+(Number(b.masuk)||0),0);
   const tK = items.reduce((a,b)=>a+(Number(b.keluar)||0),0);
   const saldo = tM - tK;
@@ -547,7 +545,7 @@ h2.judul{text-align:center;font-size:14pt;font-weight:700;margin:0 0 4px;text-tr
 .subtitle{text-align:center;font-size:11pt;margin:0 0 18px;color:#1e293b}
 table.kas{width:100%;border-collapse:collapse;font-size:10.5pt;margin-bottom:24px;border:2px solid #000}
 table.kas th,table.kas td{border:1px solid #000;padding:6px 8px;vertical-align:middle}
-table.kas th{background:#fff;font-weight:700;text-align:center;font-size:10.5pt;text-transform:none;letter-spacing:0;color:#000}
+table.kas th{background:#fff;font-weight:700;text-align:center;font-size:10.5pt}
 table.kas td.c{text-align:center}
 table.kas td.r{text-align:right}
 table.kas tr.row-total td{font-weight:700;font-size:11.5pt;background:#f8fafc}
@@ -597,9 +595,8 @@ ${subtitle?`<div class="subtitle">${esc(subtitle)}</div>`:''}
   w.document.write(doc); w.document.close();
 }
 
-/* ============ Helper HTML: Tabel Laporan Arus Kas (gaya gambar) ============ */
-function renderTabelArusKas(items, opts){
-  opts = opts || {};
+/* ============ Helper HTML: Tabel Laporan Arus Kas ============ */
+function renderTabelArusKas(items){
   const tM = items.reduce((a,b)=>a+(Number(b.masuk)||0),0);
   const tK = items.reduce((a,b)=>a+(Number(b.keluar)||0),0);
   const saldo = tM - tK;
@@ -674,63 +671,54 @@ async function doLogin(e){
     if(usr.role==='jamaah')state.page='laporanMasjid';
     else if(usr.role==='bendahara_program')state.page='programSaya';
     else state.page='dashboard';
-    state.setingView=null;state.kegiatanId=null;state.kegiatanView='ringkasan';showPasswords=false;
+    state.setingView=null;state.kegiatanId=null;state.kegiatanView='ringkasan';state.eventView='main';showPasswords=false;
     document.getElementById('loginPage').style.display='none';
     document.getElementById('app').style.display='block';
     render();toast('Selamat datang, '+usr.nama,'ok');
   }catch(err){console.error(err);toast('Error login: '+(err.message||err),'error');}
   finally{btn.textContent=orig;btn.disabled=false;}
 }
-function logout(){if(!confirm('Keluar dari sistem?'))return;state.user=null;state.setingView=null;state.kegiatanId=null;state.bendaharaEventId=null;state.loadedUnits=[];showPasswords=false;DB=defaultDB();document.getElementById('app').style.display='none';document.getElementById('loginPage').style.display='flex';document.getElementById('loginPass').value='';document.getElementById('loginUser').value='';loadYayasanLogo();}
+function logout(){if(!confirm('Keluar dari sistem?'))return;state.user=null;state.setingView=null;state.kegiatanId=null;state.bendaharaEventId=null;state.eventView='main';state.loadedUnits=[];showPasswords=false;DB=defaultDB();document.getElementById('app').style.display='none';document.getElementById('loginPage').style.display='flex';document.getElementById('loginPass').value='';document.getElementById('loginUser').value='';loadYayasanLogo();}
 async function loadYayasanLogo(){try{const {data}=await sb1.from('app_units').select('settings').eq('unit_key','yayasan').maybeSingle();if(data&&data.settings&&data.settings.logo)DB.settings.yayasan.logo=data.settings.logo;}catch(e){}updateLoginLogo();}
 
 /* ============ MENU ============ */
 function menusFor(){
   const r=state.user.role;
-  // Bendahara Program: hanya 1 menu
   if(r==='bendahara_program')return [{id:'programSaya',label:'Program Donasi Saya',ico:'🎉'}];
-  // Jamaah: hanya laporan
   if(r==='jamaah')return [{id:'laporanMasjid',label:'Laporan Masjid',ico:'🕌'},{id:'laporanYayasan',label:'Laporan Yayasan',ico:'🏛️'}];
-  // Admin: semua akses yayasan
   if(r==='admin')return [
     {id:'dashboard',label:'Dashboard',ico:'📊'},{id:'seting',label:'Seting & User',ico:'⚙️'},
     {id:'tahun',label:'Tahun Anggaran',ico:'📅'},{id:'transaksi',label:'Transaksi',ico:'💵'},
     {id:'event',label:'Program Donasi',ico:'🎉'},{id:'persetujuan',label:'Persetujuan Anggaran',ico:'✅'},
     {id:'laporan',label:'Laporan',ico:'📈'}
   ];
-  // Ketua: dashboard, laporan, laporan lengkap, persetujuan
   if(r==='ketua')return [
     {id:'dashboard',label:'Dashboard',ico:'📊'},{id:'laporan',label:'Laporan',ico:'📈'},
     {id:'laporanKetua',label:'Laporan Lengkap',ico:'📚'},{id:'persetujuan',label:'Persetujuan Anggaran',ico:'✅'}
   ];
-  // YAYASAN: full akses di yayasan; jika pindah unit → hanya laporan
-  if(r==='yayasan'){
-    if(state.ctxUnit !== 'yayasan'){
-      return [{id:'laporan',label:'Laporan (Read-only)',ico:'📈'}];
-    }
-    return [
-      {id:'dashboard',label:'Dashboard',ico:'📊'},
-      {id:'seting',label:'Seting',ico:'⚙️'},
-      {id:'tahun',label:'Tahun Anggaran',ico:'📅'},
-      {id:'transaksi',label:'Transaksi',ico:'💵'},
-      {id:'event',label:'Program Donasi',ico:'🎉'},
-      {id:'persetujuan',label:'Persetujuan Anggaran',ico:'✅'},
-      {id:'laporan',label:'Laporan',ico:'📈'}
-    ];
-  }
-  // Unit / Mahad (SD, TK, Masjid) — menu lengkap sesuai tipe unit
+  // Unit / mahad / yayasan (bisa ganti unit)
   const u=state.ctxUnit,tp=UNITS[u].tipe;
-  const m=[{id:'dashboard',label:'Dashboard',ico:'📊'},{id:'seting',label:'Seting',ico:'⚙️'},{id:'tahun',label:labelTahun(u),ico:'📅'}];
+  const isYayasan = (r === 'yayasan');
+  const isViewingYayasan = (u === 'yayasan');
+  // Hide dashboard for yayasan when viewing non-yayasan unit
+  const hideDashboard = isYayasan && !isViewingYayasan;
+  const m=[];
+  if(!hideDashboard) m.push({id:'dashboard',label:'Dashboard',ico:'📊'});
+  m.push({id:'seting',label:'Seting',ico:'⚙️'});
+  m.push({id:'tahun',label:labelTahun(u),ico:'📅'});
   if(tp==='mahad'){
     m.push({id:'guru',label:'Data Guru',ico:'👨‍🏫'},{id:'siswa',label:'Data Siswa',ico:'👨‍🎓'},
       {id:'gajiGuru',label:'Pembayaran Gaji Guru',ico:'💼'},{id:'pembayaran',label:'Pembayaran Siswa',ico:'💳'},
       {id:'transaksi',label:'Transaksi',ico:'💵'},{id:'kegiatan',label:'Kegiatan Siswa',ico:'📚'},
-      {id:'event',label:'Program Donasi',ico:'🎉'},{id:'permohonan',label:'Permohonan Dana',ico:'📤'},
-      {id:'laporan',label:'Laporan',ico:'📈'});
+      {id:'event',label:'Program Donasi',ico:'🎉'});
+    if(isYayasan) m.push({id:'persetujuan',label:'Persetujuan Anggaran',ico:'✅'});
+    else m.push({id:'permohonan',label:'Permohonan Dana',ico:'📤'});
+    m.push({id:'laporan',label:'Laporan',ico:'📈'});
     return m;
   }
   m.push({id:'transaksi',label:'Transaksi',ico:'💵'},{id:'event',label:'Program Donasi',ico:'🎉'});
-  m.push({id:'permohonan',label:'Permohonan Dana',ico:'📤'});
+  if(isYayasan) m.push({id:'persetujuan',label:'Persetujuan Anggaran',ico:'✅'});
+  else m.push({id:'permohonan',label:'Permohonan Dana',ico:'📤'});
   m.push({id:'laporan',label:'Laporan',ico:'📈'});
   return m;
 }
@@ -765,16 +753,43 @@ function renderTopbar(){
   const isDark=document.body.classList.contains('dark');
   document.getElementById('topbar').innerHTML=`<div style="display:flex;align-items:center;gap:12px"><button class="hamb" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>${left}</div><div class="tb-right"><span class="tb-user">${esc(state.user.nama)} <small>&middot; ${esc(roleLabel(r))}</small></span><button class="btn ghost sm dark-toggle-btn" onclick="toggleDark()" title="Mode Gelap">${isDark?'☀️':'🌙'}</button><button class="btn ghost sm" onclick="logout()">Keluar</button></div>`;
 }
-function go(page){if(state.page!==page)state.setingView=null;state.page=page;if(page!=='eventDetail'&&page!=='bendaharaProgram')state.eventId=null;if(page!=='kegiatanDetail'){state.kegiatanId=null;state.kegiatanView='ringkasan';}document.getElementById('sidebar').classList.remove('open');render();}
+function go(page){
+  if(state.page!==page)state.setingView=null;
+  state.page=page;
+  if(page!=='eventDetail'&&page!=='bendaharaProgram'){state.eventId=null;state.eventView='main';}
+  if(page!=='kegiatanDetail'){state.kegiatanId=null;state.kegiatanView='ringkasan';}
+  document.getElementById('sidebar').classList.remove('open');
+  render();
+}
 function setSetingView(v){state.setingView=v;render();}
 function setKegiatanView(v){state.kegiatanView=v;render();}
-function gantiUnit(u){state.ctxUnit=u;state.page='dashboard';state.setingView=null;render();}
+function setEventView(v){state.eventView=v;render();}
+function gantiUnit(u){
+  state.ctxUnit=u;
+  state.setingView=null;
+  const menus=menusFor();
+  // Jika halaman saat ini tidak tersedia di menu baru, redirect
+  if(!menus.some(m=>m.id===state.page)){
+    const hasDashboard=menus.some(m=>m.id==='dashboard');
+    if(hasDashboard) state.page='dashboard';
+    else {
+      // Yayasan viewing non-yayasan unit: pilih laporan
+      const laporan=menus.find(m=>m.id==='laporan');
+      state.page = laporan ? 'laporan' : (menus[0]?.id||'laporan');
+    }
+  }
+  render();
+}
 function setFilter(k,v){FILTER[k]=v;render();}
 function render(){renderSidebar();renderTopbar();renderPage();}
 function renderPage(){
   const p=state.page;let h='';
   switch(p){
-    case 'dashboard':h=pageDashboard();break;
+    case 'dashboard':
+      // Safety check: yayasan tidak boleh lihat dashboard non-yayasan
+      if(state.user.role==='yayasan' && state.ctxUnit!=='yayasan'){h=pageLaporan();}
+      else h=pageDashboard();
+      break;
     case 'seting':h=pageSeting();break;
     case 'tahun':h=pageTahun();break;
     case 'transaksi':h=pageTransaksi();break;
@@ -818,11 +833,11 @@ function pageDashboard(){
   const masuk=trx.filter(t=>t.jenis==='masuk').reduce((a,b)=>a+Number(b.jumlah),0);
   const keluar=trx.filter(t=>t.jenis==='keluar').reduce((a,b)=>a+Number(b.jumlah),0);
   const saldo=saldoUnit(u,th);
-  let h=`<div class="cards">
-    <div class="stat"><span>Saldo Kas</span><strong>${rp(saldo)}</strong><small>${labelTahun(u)} ${esc(th)}</small></div>
-    <div class="stat green"><span>Total Pemasukan</span><strong>${rp(masuk)}</strong></div>
-    <div class="stat red"><span>Total Pengeluaran</span><strong>${rp(keluar)}</strong></div>
-    <div class="stat amber"><span>Jumlah Transaksi</span><strong>${num(trx.length)}</strong></div>
+  let h=`<div class="cards compact">
+    <div class="stat compact"><span>Saldo Kas</span><strong>${rp(saldo)}</strong></div>
+    <div class="stat compact green"><span>Total Pemasukan</span><strong>${rp(masuk)}</strong></div>
+    <div class="stat compact red"><span>Total Pengeluaran</span><strong>${rp(keluar)}</strong></div>
+    <div class="stat compact amber"><span>Jumlah Transaksi</span><strong>${num(trx.length)}</strong></div>
   </div>`;
   if(tp==='yayasan'||r==='ketua'||r==='admin'){
     let rows='',totalAll=0,tMA=0,tKA=0;
@@ -838,10 +853,14 @@ function pageDashboard(){
     const pending=DB.permohonan.filter(p=>p.status==='pending').length;
     if(pending>0)h+=`<div class="card" style="border-left:4px solid var(--accent)"><h3>⏳ Menunggu Persetujuan</h3><p style="font-size:13px;color:var(--muted)">Terdapat <strong>${pending}</strong> permohonan menunggu persetujuan.<button class="btn accent sm" style="margin-left:10px" onclick="go('persetujuan')">Lihat</button></p></div>`;
   }
-  // Laporan arus kas (gaya gambar) untuk transaksi terakhir
-  const thData=DB.transaksi.filter(t=>t.unit===u&&t.tahun===th).sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);
-  const itemsKas=thData.map(t=>({tgl:t.tanggal,kategori:t.kategori,keterangan:t.keterangan,masuk:t.jenis==='masuk'?Number(t.jumlah):0,keluar:t.jenis==='keluar'?Number(t.jumlah):0}));
-  h+=`<div class="card"><h3>📋 Laporan Arus Kas — ${esc(UNITS[u].nama)} (${esc(th)})</h3>${renderTabelArusKas(itemsKas)}</div>`;
+  /* 5 Transaksi Terakhir */
+  const last=DB.transaksi.filter(t=>t.unit===u).sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?1:-1).slice(0,5);
+  h+=`<div class="card"><h3>📜 5 Transaksi Terakhir — ${esc(UNITS[u].nama)}</h3>`;
+  if(!last.length)h+=`<div class="empty">Belum ada transaksi.</div>`;
+  else{
+    h+=`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tanggal</th><th>Kategori</th><th>Keterangan</th><th class="r">Masuk</th><th class="r">Keluar</th></tr></thead><tbody>${last.map((t,i)=>`<tr><td class="c">${i+1}</td><td>${fmtTgl(t.tanggal)}</td><td>${esc(t.kategori)}</td><td>${esc(t.keterangan||'-')}</td><td class="r masuk">${t.jenis==='masuk'?rp(t.jumlah):'-'}</td><td class="r keluar">${t.jenis==='keluar'?rp(t.jumlah):'-'}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+  h+=`</div>`;
   const evs=DB.events.filter(e=>e.unit===u&&!e.selesai);
   if(evs.length){
     h+=`<div class="card"><h3>Program Donasi Aktif</h3><div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c no-print">Kelola</th><th>Nama Program</th><th>Tanggal</th><th class="r">Dana Terkumpul</th></tr></thead><tbody>${evs.slice(-5).map(e=>`<tr><td class="c no-print"><button class="btn xs primary" onclick="bukaEvent('${e.id}')">Kelola</button></td><td>${esc(e.nama)}</td><td>${fmtTgl(e.tanggal)}</td><td class="r ${saldoEvent(e.id)>=0?'masuk':'keluar'}">${rp(saldoEvent(e.id))}</td></tr>`).join('')}</tbody></table></div></div>`;
@@ -983,7 +1002,7 @@ function formRiwayatGaji(gid){
   const l=DB.gajiGuru.filter(x=>x.guruId===gid).sort((a,b)=>(a.berlakuMulai||'')<(b.berlakuMulai||'')?1:-1);
   const rows=l.map(x=>{const ia=(x.berlakuMulai||'')<=todayStr()&&l.find(y=>(y.berlakuMulai||'')<=todayStr()&&(y.berlakuMulai||'')>(x.berlakuMulai||''))===undefined;return `<tr><td>${fmtTgl(x.berlakuMulai)}</td><td class="r"><strong>${rp(x.jumlah)}</strong></td><td>${esc(x.keterangan||'-')}</td><td class="c">${ia?'<span class="badge ok">Aktif</span>':''}</td><td class="c no-print"><button class="btn xs danger" onclick="hapusGaji('${x.id}')">🗑</button></td></tr>`;}).join('');
   const gs=gajiAktif(gid,todayStr());
-  showModal('Riwayat Gaji: '+g.nama,`<div class="cards" style="margin-bottom:14px"><div class="stat green"><span>Gaji Aktif</span><strong>${gs>0?rp(gs):'Belum diset'}</strong></div></div><div class="section-title">➕ Tambah Entri</div><div class="form-grid"><div class="form-row"><label>Gaji (Rp)</label><input type="number" id="ggJumlah" min="0" required></div><div class="form-row"><label>Berlaku Mulai</label><input type="date" id="ggBerlaku" value="${todayStr()}" required></div></div><div class="form-row"><label>Keterangan</label><input id="ggKet"></div><div class="form-actions"><button class="btn primary" onclick="simpanGaji('${gid}')">💾 Tambah</button></div><div class="section-title">Riwayat</div>${l.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Berlaku</th><th class="r">Jumlah</th><th>Keterangan</th><th class="c">Status</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty">Belum ada.</div>'}<div class="form-actions" style="margin-top:16px"><button class="btn ghost" onclick="closeModal()">Tutup</button></div>`);
+  showModal('Riwayat Gaji: '+g.nama,`<div class="cards compact" style="margin-bottom:14px"><div class="stat compact green"><span>Gaji Aktif</span><strong>${gs>0?rp(gs):'Belum diset'}</strong></div></div><div class="section-title">➕ Tambah Entri</div><div class="form-grid"><div class="form-row"><label>Gaji (Rp)</label><input type="number" id="ggJumlah" min="0" required></div><div class="form-row"><label>Berlaku Mulai</label><input type="date" id="ggBerlaku" value="${todayStr()}" required></div></div><div class="form-row"><label>Keterangan</label><input id="ggKet"></div><div class="form-actions"><button class="btn primary" onclick="simpanGaji('${gid}')">💾 Tambah</button></div><div class="section-title">Riwayat</div>${l.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Berlaku</th><th class="r">Jumlah</th><th>Keterangan</th><th class="c">Status</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty">Belum ada.</div>'}<div class="form-actions" style="margin-top:16px"><button class="btn ghost" onclick="closeModal()">Tutup</button></div>`);
 }
 function simpanGaji(gid){const g=DB.guru.find(x=>x.id===gid);if(!g)return;const jml=Number(document.getElementById('ggJumlah').value);const bm=document.getElementById('ggBerlaku').value;const k=document.getElementById('ggKet').value.trim();if(!jml||jml<=0){toast('Jumlah tidak valid','error');return;}if(!bm){toast('Tanggal wajib','error');return;}DB.gajiGuru.push({id:uid(),unit:state.ctxUnit,guruId:gid,jumlah:jml,berlakuMulai:bm,keterangan:k});saveDB();toast('Disimpan','ok');formRiwayatGaji(gid);render();}
 function hapusGaji(id){if(!confirm('Hapus entri gaji ini?'))return;const e=DB.gajiGuru.find(x=>x.id===id);if(!e)return;const gid=e.guruId;DB.gajiGuru=DB.gajiGuru.filter(x=>x.id!==id);saveDB();toast('Dihapus','ok');formRiwayatGaji(gid);render();}
@@ -997,12 +1016,24 @@ function pageGajiGuru(){
   data.sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?1:-1);
   const total=data.reduce((a,b)=>a+Number(b.jumlah),0);
   const rows=data.map((p,i)=>{const g=DB.guru.find(x=>x.id===p.guruId);return `<tr><td class="c">${i+1}</td><td>${fmtTgl(p.tanggal)}</td><td><strong>${esc(g?g.nama:'(dihapus)')}</strong></td><td>${esc(g?g.jabatan:'-')}</td><td class="c">${esc(bulanLabel(p.bulan))}</td><td>${esc(p.keterangan||'-')}</td><td class="r keluar">${rp(p.jumlah)}</td><td class="c no-print"><button class="btn xs danger" onclick="hapusGajiPembayaran('${p.id}')">Hapus</button></td></tr>`;}).join('');
-  return `<div class="card no-print"><h3>💼 Pembayaran Gaji Guru<span class="h3-actions"><button class="btn sm purple" onclick="modalBayarGaji()">💼 Bayar Gaji</button><button class="btn sm" onclick="expGajiPembayaran()">⬇ Excel</button></span></h3>
+  return `<div class="card no-print"><h3>💼 Pembayaran Gaji Guru<span class="h3-actions"><button class="btn sm purple" onclick="modalBayarGaji()">💼 Bayar Gaji</button><button class="btn sm" onclick="cetakGajiGuru()">🖨 Cetak</button><button class="btn sm" onclick="expGajiPembayaran()">⬇ Excel</button></span></h3>
   <div class="filters"><div><label>Filter Bulan</label><input type="month" value="${esc(fb)}" onchange="setFilter('ggBulan',this.value)"></div><div style="min-width:220px"><label>Filter Guru</label><select onchange="setFilter('ggGuru',this.value)"><option value="">Semua</option>${gs.map(g=>`<option value="${g.id}" ${g.id===fg?'selected':''}>${esc(g.nama)}</option>`).join('')}</select></div><button class="btn ghost sm" onclick="setFilter('ggBulan',''); setFilter('ggGuru','')">↺ Reset</button></div></div>
-  <div class="cards"><div class="stat purple"><span>Total Pembayaran</span><strong>${rp(total)}</strong><small>${data.length} transaksi</small></div><div class="stat amber"><span>Jumlah</span><strong>${num(data.length)}</strong></div><div class="stat"><span>Jumlah Guru</span><strong>${num(gs.length)}</strong></div></div>
+  <div class="cards compact"><div class="stat compact purple"><span>Total Pembayaran</span><strong>${rp(total)}</strong></div><div class="stat compact amber"><span>Jumlah</span><strong>${num(data.length)}</strong></div><div class="stat compact"><span>Jumlah Guru</span><strong>${num(gs.length)}</strong></div></div>
   <div class="card"><h3>📜 Riwayat</h3>${data.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tanggal</th><th>Nama</th><th>Jabatan</th><th class="c">Bulan</th><th>Keterangan</th><th class="r">Jumlah</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}<tr class="tot-row"><td colspan="6">TOTAL</td><td class="r">${rp(total)}</td><td class="no-print"></td></tr></tbody></table></div>`:`<div class="empty">Belum ada.</div>`}</div>`;
 }
 function hapusGajiPembayaran(id){const p=DB.gajiPembayaran.find(x=>x.id===id);if(!p)return;if(!confirm('Hapus pembayaran gaji ini? Transaksi terkait akan dihapus.'))return;DB.gajiPembayaran=DB.gajiPembayaran.filter(x=>x.id!==id);DB.transaksi=DB.transaksi.filter(t=>t.refId!==id);saveDB();toast('Dihapus','ok');render();}
+function cetakGajiGuru(){
+  const u=state.ctxUnit,fb=FILTER.ggBulan||'',fg=FILTER.ggGuru||'';
+  let data=DB.gajiPembayaran.filter(p=>p.unit===u);
+  if(fb)data=data.filter(p=>p.bulan===fb);if(fg)data=data.filter(p=>p.guruId===fg);
+  data.sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);
+  const rows=data.map((p,i)=>{const g=DB.guru.find(x=>x.id===p.guruId);return [i+1,fmtTgl(p.tanggal),g?g.nama:'(dihapus)',g?g.jabatan:'-',bulanLabel(p.bulan),p.keterangan||'-',rp(p.jumlah)];});
+  const total=data.reduce((a,b)=>a+Number(b.jumlah),0);
+  const periodeLbl = fb ? `Bulan: ${bulanLabel(fb)}` : 'Semua Periode';
+  cetakPDF('LAPORAN PEMBAYARAN GAJI GURU', periodeLbl,
+    ['No','Tanggal','Nama Guru','Jabatan','Bulan','Keterangan','Jumlah'], rows,
+    ['','TOTAL','','','','', rp(total)], null, { tanggal: todayStr() });
+}
 function expGajiPembayaran(){const u=state.ctxUnit,fb=FILTER.ggBulan||'',fg=FILTER.ggGuru||'';let d=DB.gajiPembayaran.filter(p=>p.unit===u);if(fb)d=d.filter(p=>p.bulan===fb);if(fg)d=d.filter(p=>p.guruId===fg);d.sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);exportExcel('pembayaran_gaji_'+u,['No','Tanggal','Nama','Jabatan','Bulan','Keterangan','Jumlah'],d.map((p,i)=>{const g=DB.guru.find(x=>x.id===p.guruId);return [i+1,fmtTgl(p.tanggal),g?g.nama:'(dihapus)',g?g.jabatan:'-',bulanLabel(p.bulan),p.keterangan||'',Number(p.jumlah)];}));}
 
 /* ============ SETING ADMIN ============ */
@@ -1036,7 +1067,7 @@ function buatBackupTahun(u,tahun){
   const y=(DB.years[u]||[]).find(x=>x.tahun===tahun);
   const d={settings:DB.settings[u]||{},year:y||null,transaksi:DB.transaksi.filter(t=>t.unit===u&&t.tahun===tahun),pembayaran:isM?DB.pembayaran.filter(p=>p.unit===u&&(p.tanggal||'').slice(0,4)===ys):[]};
   if(isM){d.siswa=DB.siswa.filter(s=>s.unit===u);d.biaya=DB.biaya[u]||{};d.guru=DB.guru.filter(g=>g.unit===u);d.gajiGuru=DB.gajiGuru.filter(g=>g.unit===u);d.gajiPembayaran=DB.gajiPembayaran.filter(g=>g.unit===u&&(g.tanggal||'').slice(0,4)===ys);d.kegiatan=DB.kegiatan.filter(k=>k.unit===u);d.kegiatanTrans=DB.kegiatanTrans.filter(k=>k.unit===u);d.kegiatanPembayaran=DB.kegiatanPembayaran.filter(k=>k.unit===u);}
-  return {app:'MIP-Keuangan',version:7,type:'per-tahun',unitKey:u,unitNama:UNITS[u].nama,tipe:tp,labelTahun:labelTahun(u),tahun,exportedAt:new Date().toISOString(),exportedBy:state.user.nama,data:d};
+  return {app:'MIP-Keuangan',version:9,type:'per-tahun',unitKey:u,unitNama:UNITS[u].nama,tipe:tp,labelTahun:labelTahun(u),tahun,exportedAt:new Date().toISOString(),exportedBy:state.user.nama,data:d};
 }
 function backupTahunUnit(){const u=state.ctxUnit;const th=document.getElementById('bkTahun').value;const b=buatBackupTahun(u,th);const fn=`backup_${u}_${th.replace('/','-')}_${todayStr()}.json`;downloadJSON(b,fn);toast('Backup diunduh: '+fn,'ok');}
 function restoreTahunUnit(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{const b=JSON.parse(e.target.result);if(!b.app||b.app!=='MIP-Keuangan')throw new Error('Bukan backup sistem');if(b.type!=='per-tahun')throw new Error('Jenis backup tidak sesuai');if(!confirm(`Restore data ${b.labelTahun} ${b.tahun} dari ${b.unitNama}?`)){ev.target.value='';return;}applyBackupTahun(b);saveDB();toast('Data di-restore','ok');ev.target.value='';render();}catch(err){toast('Gagal: '+err.message,'error');ev.target.value='';}};r.readAsText(f);}
@@ -1072,7 +1103,7 @@ function googleSignOut(){if(googleState.accessToken&&window.google?.accounts?.oa
 async function backupToDrive(){
   if(!googleState.accessToken||Date.now()>googleState.expiresAt){toast('Sesi berakhir','error');return;}
   try{
-    const b={app:'MIP-Keuangan',version:7,type:'full',exportedAt:new Date().toISOString(),exportedBy:state.user.nama,data:DB};
+    const b={app:'MIP-Keuangan',version:9,type:'full',exportedAt:new Date().toISOString(),exportedBy:state.user.nama,data:DB};
     const fn=`mip-backup-${new Date().toISOString().slice(0,10)}.json`;
     const body=JSON.stringify(b);
     const q=encodeURIComponent(`name='${fn}'`);
@@ -1120,7 +1151,7 @@ async function downloadAndRestoreDrive(fid,fn){
     if(!DB.users[state.user.username])logout();else render();
   }catch(e){toast('Gagal: '+e.message,'error');}
 }
-function backupFullLocal(){const b={app:'MIP-Keuangan',version:7,type:'full',exportedAt:new Date().toISOString(),exportedBy:state.user.nama,data:DB};const fn=`mip-backup-full-${todayStr()}.json`;downloadJSON(b,fn);toast('Backup: '+fn,'ok');}
+function backupFullLocal(){const b={app:'MIP-Keuangan',version:9,type:'full',exportedAt:new Date().toISOString(),exportedBy:state.user.nama,data:DB};const fn=`mip-backup-full-${todayStr()}.json`;downloadJSON(b,fn);toast('Backup: '+fn,'ok');}
 function restoreFullLocal(ev){
   const f=ev.target.files[0];if(!f)return;
   const r=new FileReader();
@@ -1191,7 +1222,7 @@ function doResetPassword(u){const b=document.getElementById('rpBaru').value,k=do
 function resetPasswordCepat(){const u=document.getElementById('rpUser').value;const b=document.getElementById('rpBaruCepat').value;const k=document.getElementById('rpKonfCepat').value;if(!DB.users[u]){toast('User tidak ada','error');return;}if(b.length<3){toast('Min 3','error');return;}if(b!==k){toast('Konfirmasi salah','error');return;}DB.users[u].pass=b;saveUsers();document.getElementById('rpBaruCepat').value='';document.getElementById('rpKonfCepat').value='';toast('Direset','ok');}
 function hapusUser(u){if(u===state.user.username){toast('Tidak dapat hapus sendiri','error');return;}if(!DB.users[u])return;if(!confirm(`Hapus user "${u}"?`))return;delete DB.users[u];saveUsers();toast('Dihapus','ok');render();}
 
-/* ============ TRANSAKSI (format laporan arus kas) ============ */
+/* ============ TRANSAKSI ============ */
 function dataTransFilter(){const u=state.ctxUnit;const th=FILTER.trTahun||tahunAktif(u);const bl=FILTER.trBulan||'';const jn=FILTER.trJenis||'';const da=FILTER.trDari||'';const sa=FILTER.trSampai||'';let d=DB.transaksi.filter(t=>t.unit===u);if(da||sa){if(da)d=d.filter(t=>(t.tanggal||'')>=da);if(sa)d=d.filter(t=>(t.tanggal||'')<=sa);}else{if(th)d=d.filter(t=>t.tahun===th);if(bl)d=d.filter(t=>(t.tanggal||'').slice(5,7)===bl);}if(jn)d=d.filter(t=>t.jenis===jn);return d.sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);}
 function pageTransaksi(){
   const u=state.ctxUnit;
@@ -1200,7 +1231,6 @@ function pageTransaksi(){
   const data=dataTransFilter();
   const tm=data.filter(t=>t.jenis==='masuk').reduce((a,b)=>a+Number(b.jumlah),0);
   const tk=data.filter(t=>t.jenis==='keluar').reduce((a,b)=>a+Number(b.jumlah),0);
-  // Table data (interactive, dengan tombol aksi)
   const rows=data.map((t,i)=>{const lk=!!t.refId;return `<tr><td class="c">${i+1}</td><td>${fmtTgl(t.tanggal)}</td><td><span class="badge ${t.jenis==='masuk'?'ok':'no'}">${t.jenis==='masuk'?'Masuk':'Keluar'}</span></td><td>${esc(t.kategori)}</td><td>${esc(t.keterangan||'-')}</td><td class="r masuk">${t.jenis==='masuk'?rp(t.jumlah):'-'}</td><td class="r keluar">${t.jenis==='keluar'?rp(t.jumlah):'-'}</td><td class="c no-print">${lk?`<span class="lock-badge" title="Transaksi terkunci.">🔒</span>`:`<button class="btn xs" onclick="formTransaksiModal('${t.id}')">Edit</button><button class="btn xs danger" onclick="hapusTrans('${t.id}')">Hapus</button>`}</td></tr>`;}).join('');
   return `<div class="card no-print"><h3>💵 Transaksi<span class="h3-actions"><button class="btn sm primary" onclick="formTransaksiModal()">➕ Input Transaksi</button></span></h3>
   <div class="filters"><div><label>Tahun</label><select onchange="setFilter('trTahun',this.value)">${tl.map(t=>`<option value="${t}" ${t===th?'selected':''}>${esc(t)}</option>`).join('')}</select></div>
@@ -1209,18 +1239,17 @@ function pageTransaksi(){
   <div style="min-width:150px"><label>Sampai</label><input type="date" value="${esc(sa)}" onchange="setFilter('trSampai',this.value)"></div>
   <div><label>Jenis</label><select onchange="setFilter('trJenis',this.value)"><option value="">Semua</option><option value="masuk" ${jn==='masuk'?'selected':''}>Pemasukan</option><option value="keluar" ${jn==='keluar'?'selected':''}>Pengeluaran</option></select></div>
   <button class="btn ghost sm" onclick="resetFilterTrans()">↺ Reset</button></div></div>
-  <div class="cards">
-    <div class="stat green"><span>Total Pemasukan</span><strong>${rp(tm)}</strong></div>
-    <div class="stat red"><span>Total Pengeluaran</span><strong>${rp(tk)}</strong></div>
-    <div class="stat amber"><span>Saldo</span><strong>${rp(tm-tk)}</strong></div>
-    <div class="stat"><span>Jumlah</span><strong>${num(data.length)}</strong></div>
+  <div class="cards compact">
+    <div class="stat compact green"><span>Total Pemasukan</span><strong>${rp(tm)}</strong></div>
+    <div class="stat compact red"><span>Total Pengeluaran</span><strong>${rp(tk)}</strong></div>
+    <div class="stat compact amber"><span>Saldo</span><strong>${rp(tm-tk)}</strong></div>
+    <div class="stat compact"><span>Jumlah</span><strong>${num(data.length)}</strong></div>
   </div>
-  <div class="card no-print">
+  <div class="card">
     <h3>Daftar Transaksi<span class="h3-actions no-print"><button class="btn sm" onclick="expTrans()">⬇ Excel</button><button class="btn sm" onclick="cetakTrans()">🖨 Cetak Laporan</button></span></h3>
     <div class="hint" style="margin-bottom:10px">Klik <strong>Cetak Laporan</strong> untuk mencetak format Laporan Arus Kas.</div>
     ${data.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Jenis</th><th>Kategori</th><th>Keterangan</th><th class="r">Masuk</th><th class="r">Keluar</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}<tr class="tot-row"><td colspan="5">TOTAL MASUK</td><td class="r masuk">${rp(tm)}</td><td class="no-print" colspan="2"></td></tr><tr class="tot-row"><td colspan="5">TOTAL KELUAR</td><td class="r keluar">${rp(tk)}</td><td class="no-print" colspan="2"></td></tr><tr class="tot-row"><td colspan="5">SALDO</td><td class="r" colspan="3">${rp(tm-tk)}</td></tr></tbody></table></div>`:`<div class="empty">Tidak ada.</div>`}
-  </div>
-  <div class="card"><h3>📋 Laporan Arus Kas</h3>${renderTabelArusKas(data.map(t=>({tgl:t.tanggal,kategori:t.kategori,keterangan:t.keterangan,masuk:t.jenis==='masuk'?Number(t.jumlah):0,keluar:t.jenis==='keluar'?Number(t.jumlah):0})))}</div>`;
+  </div>`;
 }
 function resetFilterTrans(){delete FILTER.trTahun;delete FILTER.trBulan;delete FILTER.trJenis;delete FILTER.trDari;delete FILTER.trSampai;render();}
 function formTransaksiModal(id){
@@ -1256,7 +1285,7 @@ function cetakTrans(){
 /* ============ BAYAR GAJI ============ */
 function modalBayarGaji(){
   const bl=new Date().toISOString().slice(0,7);
-  showModal('Bayar Gaji Guru',`<div class="info-box">Centang guru yang akan dibayar.</div><div class="form-grid"><div class="form-row"><label>Periode Bulan</label><input type="month" id="bgBulan" value="${bl}" onchange="refreshBayarGajiRows()" required></div><div class="form-row"><label>Tanggal</label><input type="date" id="bgTanggal" value="${todayStr()}" required></div></div><div class="form-row"><label>Keterangan</label><input id="bgKet"></div><div class="section-title">Daftar Guru Aktif</div><div class="tbl-wrap" style="max-height:340px;overflow-y:auto"><table class="tbl"><thead><tr><th class="c" style="width:40px">✓</th><th>Nama</th><th>Jabatan</th><th class="r">Gaji</th><th class="c">Status</th></tr></thead><tbody id="bgTbody"></tbody></table></div><div class="cards" style="margin-top:14px;margin-bottom:0"><div class="stat green"><span>Total Terpilih</span><strong id="bgTotal">Rp 0</strong></div><div class="stat"><span>Jumlah</span><strong id="bgCount">0</strong></div></div><div class="form-actions" style="margin-top:14px"><button class="btn primary" onclick="simpanBayarGaji()">💾 Bayar</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>`,{wide:true});
+  showModal('Bayar Gaji Guru',`<div class="info-box">Centang guru yang akan dibayar.</div><div class="form-grid"><div class="form-row"><label>Periode Bulan</label><input type="month" id="bgBulan" value="${bl}" onchange="refreshBayarGajiRows()" required></div><div class="form-row"><label>Tanggal</label><input type="date" id="bgTanggal" value="${todayStr()}" required></div></div><div class="form-row"><label>Keterangan</label><input id="bgKet"></div><div class="section-title">Daftar Guru Aktif</div><div class="tbl-wrap" style="max-height:340px;overflow-y:auto"><table class="tbl"><thead><tr><th class="c" style="width:40px">✓</th><th>Nama</th><th>Jabatan</th><th class="r">Gaji</th><th class="c">Status</th></tr></thead><tbody id="bgTbody"></tbody></table></div><div class="cards compact" style="margin-top:14px;margin-bottom:0"><div class="stat compact green"><span>Total Terpilih</span><strong id="bgTotal">Rp 0</strong></div><div class="stat compact"><span>Jumlah</span><strong id="bgCount">0</strong></div></div><div class="form-actions" style="margin-top:14px"><button class="btn primary" onclick="simpanBayarGaji()">💾 Bayar</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>`,{wide:true});
   setTimeout(refreshBayarGajiRows,20);
 }
 function refreshBayarGajiRows(){
@@ -1343,7 +1372,7 @@ function pageRekapPemb(){
   <div class="filters"><div><label>Kelas</label><select onchange="setFilter('rpKelas',this.value); setFilter('rpSiswa','')"><option value="">Semua Kelas</option>${TINGKAT[u].map(t=>`<option value="${esc(t)}" ${t===fk?'selected':''}>Kelas ${esc(t)}</option>`).join('')}</select></div>
   <div style="min-width:220px"><label>Siswa</label><select onchange="setFilter('rpSiswa',this.value)"><option value="">Semua</option>${DB.siswa.filter(s=>s.unit===u&&(!fk||s.tingkat===fk)).sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama)).map(s=>`<option value="${s.id}" ${s.id===fs?'selected':''}>${esc(s.tingkat)} — ${esc(s.nis)} — ${esc(s.nama)}</option>`).join('')}</select></div>
   <button class="btn ghost sm" onclick="setFilter('rpKelas',''); setFilter('rpSiswa','')">↺ Reset</button></div></div>
-  <div class="cards"><div class="stat"><span>Total Tagihan</span><strong>${rp(tt)}</strong><small>${l.length} siswa</small></div><div class="stat green"><span>Total Dibayar</span><strong>${rp(tb)}</strong></div><div class="stat red"><span>Total Kekurangan</span><strong>${rp(tt-tb)}</strong></div><div class="stat amber"><span>Progres</span><strong>${tt>0?Math.round(tb/tt*100):0}%</strong></div></div>
+  <div class="cards compact"><div class="stat compact"><span>Total Tagihan</span><strong>${rp(tt)}</strong></div><div class="stat compact green"><span>Total Dibayar</span><strong>${rp(tb)}</strong></div><div class="stat compact red"><span>Kekurangan</span><strong>${rp(tt-tb)}</strong></div><div class="stat compact amber"><span>Progres</span><strong>${tt>0?Math.round(tb/tt*100):0}%</strong></div></div>
   <div class="card"><h3>Tabel Rekap</h3>${l.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>NIS</th><th>Nama</th><th class="c">Tkt</th><th class="r">Tagihan</th><th class="r">Dibayar</th><th class="r">Kurang</th><th>Progress</th><th class="c">Status</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}<tr class="tot-row"><td colspan="4">TOTAL</td><td class="r">${rp(tt)}</td><td class="r">${rp(tb)}</td><td class="r">${rp(tt-tb)}</td><td colspan="3"></td></tr></tbody></table></div>`:`<div class="empty">Tidak ada siswa.</div>`}</div>`;
 }
 function pageDetailPemb(){
@@ -1361,7 +1390,7 @@ function pageDetailPemb(){
       const bl=DB.pembayaran.filter(p=>p.siswaId===s.id).sort((a,b2)=>(a.tanggal||'')<(b2.tanggal||'')?1:-1).map((p,i)=>`<tr><td class="c">${i+1}</td><td>${fmtTgl(p.tanggal)}</td><td>${esc(p.komponen)}</td><td>${esc(p.keterangan||'-')}</td><td class="r">${rp(p.jumlah)}</td></tr>`).join('');
       dh=`<div class="card"><h3>👨‍🎓 ${esc(s.nama)}<span class="h3-actions no-print"><button class="btn sm primary" onclick="formPembayaranModal('${s.id}')">➕ Input</button><button class="btn sm" onclick="cetakDetailSiswa('${s.id}')">🖨 Cetak</button></span></h3>
       <div class="hint" style="margin-bottom:12px">NIS: <strong>${esc(s.nis)}</strong> &middot; Kelas: <strong>${esc(s.tingkat)}</strong></div>
-      <div class="cards" style="margin-bottom:14px"><div class="stat"><span>Total Tagihan</span><strong>${rp(tt)}</strong></div><div class="stat green"><span>Dibayar</span><strong>${rp(tb)}</strong></div><div class="stat red"><span>Kurang</span><strong>${rp(tt-tb)}</strong></div><div class="stat amber"><span>Progres</span><strong>${tt>0?Math.round(tb/tt*100):0}%</strong></div></div>
+      <div class="cards compact" style="margin-bottom:14px"><div class="stat compact"><span>Total Tagihan</span><strong>${rp(tt)}</strong></div><div class="stat compact green"><span>Dibayar</span><strong>${rp(tb)}</strong></div><div class="stat compact red"><span>Kurang</span><strong>${rp(tt-tb)}</strong></div><div class="stat compact amber"><span>Progres</span><strong>${tt>0?Math.round(tb/tt*100):0}%</strong></div></div>
       <div class="section-title">Rincian Komponen</div><div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Komponen</th><th class="r">Tagihan</th><th class="r">Dibayar</th><th class="r">Sisa</th><th class="c">Status</th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="section-title">Riwayat Pembayaran</div>${bl?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Komponen</th><th>Ket</th><th class="r">Jumlah</th></tr></thead><tbody>${bl}</tbody></table></div>`:'<div class="empty">Belum ada.</div>'}</div>`;
     }
@@ -1487,8 +1516,8 @@ function pageKegiatanDetail(){
   else if(v==='dana')c=viewKegiatanDana(kg);
   return headerHtml+tabsHtml+c;
 }
+/* Ringkasan: riwayat transaksi (semua) + tombol cetak laporan */
 function viewKegiatanRingkasan(kg){
-  // Laporan arus kas format (gaya gambar)
   const items=[];
   DB.kegiatanPembayaran.filter(p=>p.kegiatanId===kg.id).forEach(p=>{
     const s=DB.siswa.find(x=>x.id===p.siswaId);
@@ -1498,7 +1527,21 @@ function viewKegiatanRingkasan(kg){
     items.push({tgl:t.tanggal,kategori:t.jenis==='masuk'?'Pemasukan Lain':'Pengeluaran',keterangan:t.keterangan||'',masuk:t.jenis==='masuk'?Number(t.jumlah):0,keluar:t.jenis==='keluar'?Number(t.jumlah):0});
   });
   items.sort((a,b)=>(a.tgl||'')<(b.tgl||'')?-1:1);
-  return `<div class="card"><h3>📋 Laporan Arus Kas Kegiatan <span class="h3-actions no-print"><button class="btn sm" onclick="cetakLaporanArusKasKegiatan('${kg.id}')">🖨 Cetak Laporan</button></span></h3>${renderTabelArusKas(items)}</div>`;
+  const rows=items.map((it,i)=>`<tr>
+    <td class="c">${i+1}</td>
+    <td>${it.tgl?fmtTgl(it.tgl):''}</td>
+    <td>${esc(it.kategori||'')}</td>
+    <td>${esc(it.keterangan||'')}</td>
+    <td class="r masuk">${it.masuk?rp(it.masuk):'-'}</td>
+    <td class="r keluar">${it.keluar?rp(it.keluar):'-'}</td>
+  </tr>`).join('');
+  const tM=items.reduce((a,b)=>a+(Number(b.masuk)||0),0);
+  const tK=items.reduce((a,b)=>a+(Number(b.keluar)||0),0);
+  return `<div class="card"><h3>📜 Riwayat Transaksi<span class="h3-actions no-print"><button class="btn sm" onclick="cetakLaporanArusKasKegiatan('${kg.id}')">🖨 Cetak Laporan</button></span></h3>
+  ${items.length?`<div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Kategori</th><th>Keterangan</th><th class="r">Masuk</th><th class="r">Keluar</th></tr></thead>
+    <tbody>${rows}<tr class="tot-row"><td colspan="4">TOTAL</td><td class="r masuk">${rp(tM)}</td><td class="r keluar">${rp(tK)}</td></tr></tbody>
+  </table></div>`:`<div class="empty">Belum ada transaksi.</div>`}</div>`;
 }
 function cetakLaporanArusKasKegiatan(kgId){
   const kg=DB.kegiatan.find(k=>k.id===kgId);if(!kg)return;
@@ -1573,7 +1616,7 @@ function viewKegiatanPembayaran(kg){
   const rows=ap.slice(0,300).map((p,i)=>{const s=DB.siswa.find(x=>x.id===p.siswaId);return `<tr><td class="c">${i+1}</td><td>${fmtTgl(p.tanggal)}</td><td>${esc(s?s.nis:'-')}</td><td>${esc(s?s.nama:'(dihapus)')}</td><td class="c">${esc(s?s.tingkat:'-')}</td><td>${esc(p.keterangan||'-')}</td><td class="r masuk">${rp(p.jumlah)}</td><td class="c no-print">${!isS?`<button class="btn xs" onclick="formEditKegiatanPembayaran('${p.id}')">Edit</button><button class="btn xs danger" onclick="hapusKegiatanPembayaran('${p.id}')">Hapus</button>`:`<span class="lock-badge">🔒</span>`}</td></tr>`;}).join('');
   const tot=ap.reduce((a,b)=>a+Number(b.jumlah),0);
   return `${!isS?`<div class="card no-print"><h3>👨‍🎓 Pembayaran Siswa Kegiatan<span class="h3-actions"><button class="btn sm primary" onclick="formKegiatanPembayaranModal()">➕ Input</button></span></h3><div class="info-box">Biaya/siswa: <strong>${rp(kg.biayaPerSiswa||0)}</strong>. Tidak masuk transaksi sekolah.</div></div>`:''}
-  <div class="cards"><div class="stat green"><span>Total Pembayaran</span><strong>${rp(tot)}</strong></div><div class="stat amber"><span>Jumlah</span><strong>${num(ap.length)}</strong></div></div>
+  <div class="cards compact"><div class="stat compact green"><span>Total Pembayaran</span><strong>${rp(tot)}</strong></div><div class="stat compact amber"><span>Jumlah</span><strong>${num(ap.length)}</strong></div></div>
   <div class="card"><h3>📜 Riwayat Pembayaran</h3>${ap.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>NIS</th><th>Nama</th><th class="c">Tkt</th><th>Ket</th><th class="r">Jumlah</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}<tr class="tot-row"><td colspan="6">TOTAL</td><td class="r">${rp(tot)}</td><td class="no-print"></td></tr></tbody></table></div>`:`<div class="empty">Belum ada.</div>`}</div>`;
 }
 function formKegiatanPembayaranModal(psid){
@@ -1625,8 +1668,8 @@ function cetakKegiatanRekap(kid){const kg=DB.kegiatan.find(k=>k.id===kid);if(!kg
 function viewKegiatanDana(kg){
   const u=state.ctxUnit;const isS=!!kg.selesai;
   const rd=DB.kegiatanTrans.filter(t=>t.kegiatanId===kg.id&&t.refId).sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?1:-1);
-  const rows=rd.map((t,i)=>{const jl=t.jenis==='masuk'?'<span class="badge ok">Masuk ke Kegiatan</span>':'<span class="badge no">Keluar dari Kegiatan</span>';return `<tr><td class="c">${i+1}</td><td>${fmtTgl(t.tanggal)}</td><td>${jl}</td><td>${esc(t.keterangan||'-')}</td><td class="r ${t.jenis==='masuk'?'masuk':'keluar'}">${rp(t.jumlah)}</td><td class="c no-print">${!isS?`<button class="btn xs danger" onclick="hapusTransferKegiatan('${t.id}')">Hapus</button>`:`<span class="lock-badge">🔒</span>`}</td></tr>`;}).join('');
-  return `${!isS?`<div class="card no-print"><h3>🔄 Transfer Dana Kegiatan &amp; ${esc(labelKasUnit(u))}</h3><div class="info-box">⚡ Transfer ini tercatat di menu Transaksi sebagai transaksi terkunci. Hapus riwayat akan menghapus transaksi terkait.</div><div class="form-actions"><button class="btn accent" onclick="formDanaKegiatan('minta')">📥 Pengajuan Dana ke Sekolah</button><button class="btn success" onclick="formDanaKegiatan('setor')">📤 Setor Dana ke Sekolah</button></div></div>`:''}
+  const rows=rd.map((t,i)=>{const jl=t.jenis==='masuk'?'<span class="badge ok">Masuk ke Kegiatan</span>':'<span class="badge no">Keluar dari Kegiatan</span>';return `<tr><td class="c">${i+1}</td><td>${fmtTgl(t.tanggal)}</td><td>${jl}</td><td>${esc(t.keterangan||'-')}</td><td class="r ${t.jenis==='masuk'?'masuk':'keluar'}">${rp(t.jumlah)}</td><td class="c no-print">${!isS?`<button class="btn xs" onclick="formEditKegiatanTrans('${t.id}')">Edit</button><button class="btn xs danger" onclick="hapusTransferKegiatan('${t.id}')">Hapus</button>`:`<span class="lock-badge">🔒</span>`}</td></tr>`;}).join('');
+  return `${!isS?`<div class="card no-print"><h3>🔄 Transfer Dana Kegiatan &amp; ${esc(labelKasUnit(u))}</h3><div class="info-box">⚡ Transfer ini tercatat di menu Transaksi sebagai transaksi terkunci.</div><div class="form-actions"><button class="btn accent" onclick="formDanaKegiatan('minta')">📥 Pengajuan Dana ke Sekolah</button><button class="btn success" onclick="formDanaKegiatan('setor')">📤 Setor Dana ke Sekolah</button></div></div>`:''}
   <div class="card"><h3>📜 Riwayat Transfer</h3>${rd.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Jenis</th><th>Keterangan</th><th class="r">Jumlah</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada.</div>`}</div>`;
 }
 function hapusTransferKegiatan(kid){const t=DB.kegiatanTrans.find(x=>x.id===kid);if(!t)return;const kg=DB.kegiatan.find(k=>k.id===t.kegiatanId);if(kg&&kg.selesai){toast('Selesai','error');return;}if(!t.refId){toast('Bukan transfer','error');return;}if(!confirm('Hapus transfer ini? Transaksi terkait akan dihapus.'))return;DB.transaksi=DB.transaksi.filter(x=>x.refId!==t.refId);DB.kegiatanTrans=DB.kegiatanTrans.filter(x=>x.id!==kid);saveDB();toast('✓ Dihapus','ok');render();}
@@ -1671,7 +1714,7 @@ function pageEvent(){
   }).join('');
   return `<div class="card no-print"><h3>🎉 Program Donasi<span class="h3-actions"><button class="btn sm primary" onclick="formBuatProgram()">➕ Buat Program Donasi</button></span></h3>
   <div class="filters"><div><label>Status</label><select onchange="setFilter('evStatus',this.value)"><option value="aktif" ${fs==='aktif'?'selected':''}>Aktif</option><option value="selesai" ${fs==='selesai'?'selected':''}>Selesai</option><option value="semua" ${fs==='semua'?'selected':''}>Semua</option></select></div></div>
-  <div class="info-box">ℹ️ Tombol <strong>✓</strong> aktif saat saldo = Rp 0. Bendahara program (opsional) dikelola di halaman <strong>Kelola</strong>.</div></div>
+  <div class="info-box">ℹ️ Tombol <strong>✓</strong> aktif saat saldo = Rp 0. Bendahara program dan transfer dana dikelola di halaman <strong>Kelola</strong>.</div></div>
   <div class="card"><h3>Daftar Program (${l.length})</h3>${l.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th class="c no-print">Kelola</th><th>Nama Program</th><th>Tanggal</th><th class="r">Pemasukan</th><th class="r">Pengeluaran</th><th class="r">Saldo</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada program.</div>`}</div>`;
 }
 function formBuatProgram(editId){
@@ -1699,7 +1742,7 @@ function hapusEvent(id){
   tr.forEach(u=>delete DB.users[u]);
   saveDB();saveUsers();toast('Dihapus','ok');render();
 }
-function bukaEvent(id){state.eventId=id;state.page='eventDetail';render();}
+function bukaEvent(id){state.eventId=id;state.eventView='main';state.page='eventDetail';render();}
 function selesaikanProgram(id){
   const ev=DB.events.find(e=>e.id===id);if(!ev){toast('Tidak ditemukan','error');return;}
   if(ev.selesai){toast('Sudah selesai','error');return;}
@@ -1715,7 +1758,7 @@ function pageProgramSaya(){
   state.eventId=evId;
   return pageEventDetail();
 }
-/* HALAMAN BARU: Kelola Bendahara Program */
+/* HALAMAN Kelola Bendahara Program */
 function pageBendaharaProgram(){
   const evId = state.bendaharaEventId || state.eventId;
   const ev = DB.events.find(e=>e.id===evId);
@@ -1746,7 +1789,6 @@ function pageBendaharaProgram(){
     </h3>
     <div class="info-box">
       ℹ️ Bendahara program dapat login dan mengelola program ini (input pemasukan/pengeluaran).
-      Mereka tidak bisa mengubah info program atau mentransfer dana ke kas unit/yayasan.
       Role khusus: <strong>Bendahara Program</strong>.
     </div>
     ${bu.length
@@ -1763,13 +1805,53 @@ function kembaliKeEvent(){
   const evId = state.bendaharaEventId || state.eventId;
   state.eventId = evId;
   state.bendaharaEventId = null;
+  state.eventView = 'main';
   state.page = 'eventDetail';
   render();
+}
+/* View Dana Program Donasi */
+function viewEventDana(ev){
+  const u = ev.unit;
+  const isS = !!ev.selesai;
+  const kl = labelKasUnit(u);
+  const rd = DB.eventTrans.filter(t=>t.eventId===ev.id && t.refId).sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?1:-1);
+  const rows = rd.map((t,i)=>{
+    const jl = t.jenis==='masuk' ? '<span class="badge ok">Masuk ke Program</span>' : '<span class="badge no">Keluar dari Program</span>';
+    return `<tr>
+      <td class="c">${i+1}</td>
+      <td>${fmtTgl(t.tanggal)}</td>
+      <td>${jl}</td>
+      <td>${esc(t.keterangan||'-')}</td>
+      <td class="r ${t.jenis==='masuk'?'masuk':'keluar'}">${rp(t.jumlah)}</td>
+      <td class="c no-print">${!isS?`<button class="btn xs" onclick="formEditEventTrans('${t.id}')">Edit</button><button class="btn xs danger" onclick="hapusEventTrans('${t.id}')">Hapus</button>`:`<span class="lock-badge">🔒</span>`}</td>
+    </tr>`;
+  }).join('');
+  return `<div class="card">
+    <h3>💰 Dana ${esc(kl)} — ${esc(ev.nama)}
+      <span class="h3-actions no-print">
+        <button class="btn sm ghost" onclick="setEventView('main')">← Kembali ke Program</button>
+      </span>
+    </h3>
+    <div class="info-box">Transfer dana antara program donasi dan kas ${esc(kl)}. Transaksi akan tercatat sebagai transaksi terkunci di menu Transaksi.</div>
+    ${!isS?`<div class="form-actions">
+      <button class="btn accent" onclick="formDanaEvent('minta')">📥 Ambil dari Kas ${esc(kl)}</button>
+      <button class="btn success" onclick="formDanaEvent('setor')">📤 Setor ke Kas ${esc(kl)}</button>
+    </div>`:''}
+  </div>
+  <div class="card">
+    <h3>📜 Riwayat Transfer</h3>
+    ${rd.length?`<div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Jenis</th><th>Keterangan</th><th class="r">Jumlah</th><th class="c no-print">Aksi</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`:`<div class="empty">Belum ada transfer dana.</div>`}
+  </div>`;
 }
 function pageEventDetail(){
   const u=state.ctxUnit;const ev=DB.events.find(e=>e.id===state.eventId);
   if(!ev)return '<div class="card">Program tidak ditemukan.</div>';
   const isS=!!ev.selesai;const isB=state.user.role==='bendahara_program';
+  const evView = state.eventView || 'main';
+  if(isB && evView === 'dana') { state.eventView='main'; return pageEventDetail(); }
   const trs=DB.eventTrans.filter(t=>t.eventId===ev.id).sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);
   const m=trs.filter(t=>t.jenis==='masuk').reduce((a,b)=>a+Number(b.jumlah),0);
   const k=trs.filter(t=>t.jenis==='keluar').reduce((a,b)=>a+Number(b.jumlah),0);
@@ -1778,44 +1860,61 @@ function pageEventDetail(){
     const lk=!!t.refId;
     return `<tr><td class="c">${i+1}</td><td>${fmtTgl(t.tanggal)}</td><td><span class="badge ${t.jenis==='masuk'?'ok':'no'}">${t.jenis==='masuk'?'Masuk':'Keluar'}</span></td><td>${esc(t.keterangan||'-')}</td><td class="r masuk">${t.jenis==='masuk'?rp(t.jumlah):'-'}</td><td class="r keluar">${t.jenis==='keluar'?rp(t.jumlah):'-'}</td><td class="c no-print">${!isS?`<button class="btn xs" onclick="formEditEventTrans('${t.id}')">Edit</button>${lk?'<span class="lock-badge">🔒</span>':`<button class="btn xs danger" onclick="hapusEventTrans('${t.id}')">Hapus</button>`}`:(lk?'<span class="lock-badge">🔒</span>':'<span class="lock-badge">🔒 Selesai</span>')}</td></tr>`;
   }).join('');
-  const bml=labelAmbilKas(u),bsl=labelSetorKas(u),kl=labelKasUnit(u),sks=saldoUnit(u,tahunAktif(u));
+  const kl=labelKasUnit(u),sks=saldoUnit(u,tahunAktif(u));
   const bHtml=(ev.bendahara||ev.bendaharaUsername)?`<div style="margin-top:4px">Bendahara: <strong>${esc(ev.bendahara||'-')}</strong>${ev.bendaharaUsername?` <small style="color:#94a3b8">(@${esc(ev.bendaharaUsername)})</small>`:''}</div>`:'';
-  const buCount = userProgramBendahara(ev.id).length;
-  // Items laporan arus kas
-  const itemsKas = trs.map(t=>({tgl:t.tanggal,kategori:t.jenis==='masuk'?'Pemasukan':'Pengeluaran',keterangan:t.keterangan||'',masuk:t.jenis==='masuk'?Number(t.jumlah):0,keluar:t.jenis==='keluar'?Number(t.jumlah):0}));
   
+  /* Bendahara program — view sederhana */
   if(isB){
-    return `<div class="card"><h3>🎉 ${esc(ev.nama)} ${isS?'<span class="badge selesai">Selesai '+fmtTgl(ev.selesaiAt)+'</span>':''}</h3>
-    <div style="font-size:12.5px;color:#64748b;margin-bottom:14px">${fmtTgl(ev.tanggal)} | ${esc(ev.keterangan||'')}${t>0?`<br>Target: <strong>${rp(t)}</strong> — ${ps}%`:''}</div>
-    ${t>0?`<div class="bar" style="height:10px;margin-bottom:14px"><i style="width:${ps}%"></i></div>`:''}
-    <div class="cards compact" style="margin-bottom:0"><div class="stat compact green"><span>Pemasukan</span><strong>${rp(m)}</strong></div><div class="stat compact red"><span>Pengeluaran</span><strong>${rp(k)}</strong></div><div class="stat compact"><span>Saldo</span><strong>${rp(s)}</strong></div></div></div>
+    return `<div class="card">
+      <h3>🎉 ${esc(ev.nama)} ${isS?'<span class="badge selesai">Selesai '+fmtTgl(ev.selesaiAt)+'</span>':''}
+        <span class="h3-actions no-print"><button class="btn sm" onclick="cetakLaporanArusKasEvent('${ev.id}')">🖨 Cetak Laporan</button></span>
+      </h3>
+      <div style="font-size:12.5px;color:#64748b;margin-bottom:14px">${fmtTgl(ev.tanggal)} | ${esc(ev.keterangan||'')}${t>0?`<br>Target: <strong>${rp(t)}</strong> — ${ps}%`:''}</div>
+      ${t>0?`<div class="bar" style="height:10px;margin-bottom:14px"><i style="width:${ps}%"></i></div>`:''}
+      <div class="cards compact" style="margin-bottom:0">
+        <div class="stat compact green"><span>Pemasukan</span><strong>${rp(m)}</strong></div>
+        <div class="stat compact red"><span>Pengeluaran</span><strong>${rp(k)}</strong></div>
+        <div class="stat compact"><span>Saldo</span><strong>${rp(s)}</strong></div>
+      </div>
+    </div>
     ${!isS?`<div class="btn-row no-print"><button class="btn sm primary" onclick="formBuatDonasiProgram('${ev.id}')">➕ Input Pemasukan/Pengeluaran</button></div>`:''}
-    <div class="card"><h3>📋 Laporan Arus Kas</h3><span class="h3-actions no-print"><button class="btn sm" onclick="cetakLaporanArusKasEvent('${ev.id}')">🖨 Cetak</button></span>${renderTabelArusKas(itemsKas)}</div>`;
+    <div class="card no-print"><h3>Riwayat Transaksi</h3>${trs.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Jenis</th><th>Keterangan</th><th class="r">Jumlah</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada.</div>`}</div>`;
   }
-  return `<div class="card"><h3>🎉 ${esc(ev.nama)} ${isS?'<span class="badge selesai">Selesai '+fmtTgl(ev.selesaiAt)+'</span>':''}<span class="h3-actions no-print"><button class="btn sm ghost" onclick="go('event')">← Kembali</button>${!isS?`<button class="btn sm primary" onclick="formBuatProgram('${ev.id}')">✎ Edit Info</button><button class="btn sm success" onclick="selesaikanProgram('${ev.id}')" ${s===0?'':'disabled'} title="${s===0?'Selesaikan':'Saldo harus 0'}">✓ Selesaikan</button>`:''}</span></h3>
-  <div style="font-size:12.5px;color:#64748b;margin-bottom:10px">${fmtTgl(ev.tanggal)} | ${esc(ev.keterangan||'')}${t>0?`<br>Target: <strong>${rp(t)}</strong> — ${ps}%`:''}${bHtml}</div>
-  ${t>0?`<div class="bar" style="height:8px;margin-bottom:12px"><i style="width:${ps}%"></i></div>`:''}
-  <div class="cards compact" style="margin-bottom:0">
-    <div class="stat compact green"><span>Pemasukan</span><strong>${rp(m)}</strong></div>
-    <div class="stat compact red"><span>Pengeluaran</span><strong>${rp(k)}</strong></div>
-    <div class="stat compact"><span>Saldo</span><strong>${rp(s)}</strong></div>
-    <div class="stat compact amber"><span>${esc(kl)}</span><strong>${rp(sks)}</strong></div>
-  </div></div>
-  ${!isS?`<div class="btn-row no-print" style="margin-top:0">
-    <button class="btn sm primary" onclick="formBuatDonasiProgram('${ev.id}')">➕ Input Pemasukan/Pengeluaran</button>
-    <button class="btn sm accent" onclick="formDanaEvent('minta')">📥 ${esc(bml)}</button>
-    <button class="btn sm success" onclick="formDanaEvent('setor')">📤 ${esc(bsl)}</button>
-  </div>`:''}
-  <div class="card"><h3>👤 Bendahara Program <small style="color:#94a3b8;font-weight:400">(opsional)</small></h3>
-    <div style="font-size:12.5px;color:#64748b;margin-bottom:10px">${buCount} akun bendahara program terdaftar.</div>
-    <button class="btn-link no-print" onclick="bukaKelolaBendahara('${ev.id}')">👥 Kelola Bendahara Program →</button>
+  
+  /* View DANA (transfer) */
+  if(evView === 'dana'){
+    return viewEventDana(ev);
+  }
+  
+  /* View MAIN */
+  return `<div class="card">
+    <h3>🎉 ${esc(ev.nama)} ${isS?'<span class="badge selesai">Selesai '+fmtTgl(ev.selesaiAt)+'</span>':''}
+      <span class="h3-actions no-print">
+        <button class="btn sm ghost" onclick="go('event')">← Kembali</button>
+        <button class="btn sm" onclick="cetakLaporanArusKasEvent('${ev.id}')">🖨 Cetak Laporan</button>
+        ${!isS?`<button class="btn sm primary" onclick="formBuatProgram('${ev.id}')">✎ Edit Info</button><button class="btn sm success" onclick="selesaikanProgram('${ev.id}')" ${s===0?'':'disabled'} title="${s===0?'Selesaikan':'Saldo harus 0'}">✓ Selesaikan</button>`:''}
+      </span>
+    </h3>
+    <div style="font-size:12.5px;color:#64748b;margin-bottom:10px">${fmtTgl(ev.tanggal)} | ${esc(ev.keterangan||'')}${t>0?`<br>Target: <strong>${rp(t)}</strong> — ${ps}%`:''}${bHtml}</div>
+    ${t>0?`<div class="bar" style="height:8px;margin-bottom:12px"><i style="width:${ps}%"></i></div>`:''}
+    <div class="cards compact" style="margin-bottom:0">
+      <div class="stat compact green"><span>Pemasukan</span><strong>${rp(m)}</strong></div>
+      <div class="stat compact red"><span>Pengeluaran</span><strong>${rp(k)}</strong></div>
+      <div class="stat compact"><span>Saldo</span><strong>${rp(s)}</strong></div>
+      <div class="stat compact amber"><span>${esc(kl)}</span><strong>${rp(sks)}</strong></div>
+    </div>
   </div>
-  <div class="card"><h3>📋 Laporan Arus Kas<span class="h3-actions no-print"><button class="btn sm" onclick="cetakLaporanArusKasEvent('${ev.id}')">🖨 Cetak Laporan</button></span></h3>${renderTabelArusKas(itemsKas)}</div>
+  ${!isS?`<div class="btn-row no-print">
+    <button class="btn sm primary" onclick="formBuatDonasiProgram('${ev.id}')">➕ Input Pemasukan/Pengeluaran</button>
+    <button class="btn sm accent" onclick="setEventView('dana')">💰 Dana ${esc(kl)}</button>
+    <button class="btn-link" onclick="bukaKelolaBendahara('${ev.id}')">👥 Kelola Bendahara Program</button>
+  </div>`:''}
   <div class="card no-print"><h3>Daftar Transaksi</h3>${trs.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Jenis</th><th>Keterangan</th><th class="r">Masuk</th><th class="r">Keluar</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada.</div>`}</div>`;
 }
 function bukaKelolaBendahara(evId){
   state.bendaharaEventId = evId;
   state.eventId = evId;
+  state.eventView = 'main';
   state.page = 'bendaharaProgram';
   render();
 }
@@ -1825,8 +1924,6 @@ function cetakLaporanArusKasEvent(evId){
   const items = trs.map(t=>({tgl:t.tanggal,kategori:t.jenis==='masuk'?'Pemasukan':'Pengeluaran',keterangan:t.keterangan||'',masuk:t.jenis==='masuk'?Number(t.jumlah):0,keluar:t.jenis==='keluar'?Number(t.jumlah):0}));
   cetakLaporanArusKasPDF('Laporan Arus Kas Program Donasi', 'Program: '+ev.nama+' — '+fmtTgl(ev.tanggal), items, ev.unit, {tanggal: ev.selesaiAt||todayStr()});
 }
-
-/* Edit event trans - fix: sekarang sync juga untuk non-refId jika transfer */
 function formEditEventTrans(id){
   const t=DB.eventTrans.find(x=>x.id===id);if(!t)return;
   const ev=DB.events.find(e=>e.id===t.eventId);
@@ -1994,7 +2091,7 @@ function pagePersetujuan(){
   const rr=r.map((x,i)=>`<tr><td class="c">${i+1}</td><td>${esc(UNITS[x.dari].nama)}</td><td>${esc(labelJenisPermohonan(x))}</td><td class="r">${rp(x.jumlah)}</td><td>${fmtTgl(x.tanggal)}</td><td>${esc(x.keterangan||'-')}</td><td class="c"><span class="badge ${x.status==='approved'?'ok':'no'}">${x.status==='approved'?'Disetujui':'Ditolak'}</span></td><td>${esc(x.approvedBy||'-')}</td></tr>`).join('');
   const tM=p.filter(x=>x.jenis==='minta').reduce((a,b)=>a+Number(b.jumlah),0);
   const tS=p.filter(x=>x.jenis==='setor').reduce((a,b)=>a+Number(b.jumlah),0);
-  return `<div class="cards"><div class="stat amber"><span>Menunggu</span><strong>${p.length}</strong></div><div class="stat red"><span>Total Ajukan</span><strong>${rp(tM)}</strong></div><div class="stat green"><span>Total Setoran</span><strong>${rp(tS)}</strong></div></div>
+  return `<div class="cards compact"><div class="stat compact amber"><span>Menunggu</span><strong>${p.length}</strong></div><div class="stat compact red"><span>Total Ajukan</span><strong>${rp(tM)}</strong></div><div class="stat compact green"><span>Total Setoran</span><strong>${rp(tS)}</strong></div></div>
   <div class="card"><h3>✅ Persetujuan</h3>${p.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Unit</th><th>Jenis</th><th class="r">Jumlah</th><th>Tanggal</th><th>Keterangan</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rp1}</tbody></table></div>`:`<div class="empty">Tidak ada pengajuan.</div>`}</div>
   <div class="card"><h3>Riwayat Persetujuan</h3>${r.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Unit</th><th>Jenis</th><th class="r">Jumlah</th><th>Tanggal</th><th>Keterangan</th><th class="c">Status</th><th>Oleh</th></tr></thead><tbody>${rr}</tbody></table></div>`:`<div class="empty">Belum ada.</div>`}</div>`;
 }
@@ -2036,13 +2133,13 @@ function pageLaporan(){
     const rows=d.map((t,i)=>{run+=t.jenis==='masuk'?Number(t.jumlah):-Number(t.jumlah);return `<tr><td class="c">${i+1}</td><td>${fmtTgl(t.tanggal)}</td><td>${esc(t.kategori)}</td><td>${esc(t.keterangan||'-')}</td><td class="r masuk">${t.jenis==='masuk'?rp(t.jumlah):'-'}</td><td class="r keluar">${t.jenis==='keluar'?rp(t.jumlah):'-'}</td><td class="r"><strong>${rp(run)}</strong></td></tr>`;}).join('');
     const tm=d.filter(t=>t.jenis==='masuk').reduce((a,b)=>a+Number(b.jumlah),0);
     const tk=d.filter(t=>t.jenis==='keluar').reduce((a,b)=>a+Number(b.jumlah),0);
-    h+=`<div class="card"><h3>Laporan Arus Kas — ${esc(pl)}<span class="h3-actions no-print"><button class="btn sm" onclick="expLapKas()">⬇ Excel</button><button class="btn sm" onclick="cetakLapKas()">🖨 Cetak</button></span></h3><div class="cards" style="margin-bottom:14px"><div class="stat"><span>Saldo Awal</span><strong>${rp(sa)}</strong></div><div class="stat green"><span>Pemasukan</span><strong>${rp(tm)}</strong></div><div class="stat red"><span>Pengeluaran</span><strong>${rp(tk)}</strong></div><div class="stat amber"><span>Saldo Akhir</span><strong>${rp(sa+tm-tk)}</strong></div></div>${d.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Kategori</th><th>Keterangan</th><th class="r">Masuk</th><th class="r">Keluar</th><th class="r">Saldo</th></tr></thead><tbody>${rows}<tr class="tot-row"><td class="c"></td><td colspan="2">TOTAL</td><td></td><td class="r masuk">${rp(tm)}</td><td class="r keluar">${rp(tk)}</td><td class="r">${rp(sa+tm-tk)}</td></tr></tbody></table></div>`:`<div class="empty">Tidak ada transaksi.</div>`}</div>`;
+    h+=`<div class="card"><h3>Laporan Arus Kas — ${esc(pl)}<span class="h3-actions no-print"><button class="btn sm" onclick="expLapKas()">⬇ Excel</button><button class="btn sm" onclick="cetakLapKas()">🖨 Cetak</button></span></h3><div class="cards compact" style="margin-bottom:14px"><div class="stat compact"><span>Saldo Awal</span><strong>${rp(sa)}</strong></div><div class="stat compact green"><span>Pemasukan</span><strong>${rp(tm)}</strong></div><div class="stat compact red"><span>Pengeluaran</span><strong>${rp(tk)}</strong></div><div class="stat compact amber"><span>Saldo Akhir</span><strong>${rp(sa+tm-tk)}</strong></div></div>${d.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Kategori</th><th>Keterangan</th><th class="r">Masuk</th><th class="r">Keluar</th><th class="r">Saldo</th></tr></thead><tbody>${rows}<tr class="tot-row"><td class="c"></td><td colspan="2">TOTAL</td><td></td><td class="r masuk">${rp(tm)}</td><td class="r keluar">${rp(tk)}</td><td class="r">${rp(sa+tm-tk)}</td></tr></tbody></table></div>`:`<div class="empty">Tidak ada transaksi.</div>`}</div>`;
   }
   else if(j==='rekapkas'){
     const pl=bl?`${BULAN[Number(bl)-1]} ${th}`:`Tahun ${th}`;
     const rb=BULAN.map((nb,i)=>{const bl2=String(i+1).padStart(2,'0');let d=DB.transaksi.filter(t=>t.unit===u&&t.tahun===th&&(t.tanggal||'').slice(5,7)===bl2);const m=d.filter(t=>t.jenis==='masuk').reduce((a,b)=>a+Number(b.jumlah),0);const k=d.filter(t=>t.jenis==='keluar').reduce((a,b)=>a+Number(b.jumlah),0);return {bulan:nb,masuk:m,keluar:k,selisih:m-k};});
     const tM=rb.reduce((a,b)=>a+b.masuk,0),tK=rb.reduce((a,b)=>a+b.keluar,0),sa2=saldoAwal(u,th),st=sa2+tM-tK;
-    h+=`<div class="cards"><div class="stat"><span>Saldo Awal</span><strong>${rp(sa2)}</strong></div><div class="stat green"><span>Pemasukan</span><strong>${rp(tM)}</strong></div><div class="stat red"><span>Pengeluaran</span><strong>${rp(tK)}</strong></div><div class="stat amber"><span>Saldo Akhir</span><strong>${rp(st)}</strong></div></div>
+    h+=`<div class="cards compact"><div class="stat compact"><span>Saldo Awal</span><strong>${rp(sa2)}</strong></div><div class="stat compact green"><span>Pemasukan</span><strong>${rp(tM)}</strong></div><div class="stat compact red"><span>Pengeluaran</span><strong>${rp(tK)}</strong></div><div class="stat compact amber"><span>Saldo Akhir</span><strong>${rp(st)}</strong></div></div>
     <div class="card"><h3>📊 Rekapitulasi Arus Kas per Bulan — ${esc(pl)}<span class="h3-actions no-print"><button class="btn sm" onclick="expRekapKas()">⬇ Excel</button><button class="btn sm" onclick="cetakRekapKas()">🖨 Cetak</button></span></h3><div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Bulan</th><th class="r">Pemasukan</th><th class="r">Pengeluaran</th><th class="r">Selisih</th><th class="r">Saldo Kumulatif</th></tr></thead><tbody><tr class="tot-row"><td class="c"></td><td><strong>Saldo Awal</strong></td><td class="r" colspan="3">—</td><td class="r"><strong>${rp(sa2)}</strong></td></tr>${(()=>{let k=sa2;return rb.map((r,i)=>{k+=r.selisih;return `<tr><td class="c">${i+1}</td><td>${esc(r.bulan)}</td><td class="r masuk">${r.masuk?rp(r.masuk):'-'}</td><td class="r keluar">${r.keluar?rp(r.keluar):'-'}</td><td class="r ${r.selisih>=0?'masuk':'keluar'}">${rp(r.selisih)}</td><td class="r"><strong>${rp(k)}</strong></td></tr>`;}).join('');})()}<tr class="tot-row"><td class="c"></td><td>TOTAL</td><td class="r">${rp(tM)}</td><td class="r">${rp(tK)}</td><td class="r">${rp(tM-tK)}</td><td class="r">${rp(st)}</td></tr></tbody></table></div></div>`;
   }
   else if(j==='kategori'){
@@ -2052,7 +2149,7 @@ function pageLaporan(){
     const ks=Object.keys(km).sort();
     const rows=ks.map((k,i)=>{const r=km[k];const s=r.masuk-r.keluar;return `<tr><td class="c">${i+1}</td><td><strong>${esc(k)}</strong></td><td class="r masuk">${r.masuk?rp(r.masuk):'-'}</td><td class="r keluar">${r.keluar?rp(r.keluar):'-'}</td><td class="r ${s>=0?'masuk':'keluar'}"><strong>${rp(s)}</strong></td></tr>`;}).join('');
     const tM=ks.reduce((a,k)=>a+km[k].masuk,0),tK=ks.reduce((a,k)=>a+km[k].keluar,0);
-    h+=`<div class="cards"><div class="stat green"><span>Total Pemasukan</span><strong>${rp(tM)}</strong></div><div class="stat red"><span>Total Pengeluaran</span><strong>${rp(tK)}</strong></div><div class="stat amber"><span>Selisih</span><strong>${rp(tM-tK)}</strong></div><div class="stat"><span>Jumlah Kategori</span><strong>${num(ks.length)}</strong></div></div><div class="card"><h3>📊 Rekap per Kategori — ${esc(pl)}<span class="h3-actions no-print"><button class="btn sm" onclick="expLapKategori()">⬇ Excel</button><button class="btn sm" onclick="cetakLapKategori()">🖨 Cetak</button></span></h3>${ks.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Kategori</th><th class="r">Pemasukan</th><th class="r">Pengeluaran</th><th class="r">Selisih</th></tr></thead><tbody>${rows}<tr class="tot-row"><td class="c"></td><td>TOTAL</td><td class="r">${rp(tM)}</td><td class="r">${rp(tK)}</td><td class="r">${rp(tM-tK)}</td></tr></tbody></table></div>`:`<div class="empty">Tidak ada data.</div>`}</div>`;
+    h+=`<div class="cards compact"><div class="stat compact green"><span>Total Pemasukan</span><strong>${rp(tM)}</strong></div><div class="stat compact red"><span>Total Pengeluaran</span><strong>${rp(tK)}</strong></div><div class="stat compact amber"><span>Selisih</span><strong>${rp(tM-tK)}</strong></div><div class="stat compact"><span>Jumlah Kategori</span><strong>${num(ks.length)}</strong></div></div><div class="card"><h3>📊 Rekap per Kategori — ${esc(pl)}<span class="h3-actions no-print"><button class="btn sm" onclick="expLapKategori()">⬇ Excel</button><button class="btn sm" onclick="cetakLapKategori()">🖨 Cetak</button></span></h3>${ks.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Kategori</th><th class="r">Pemasukan</th><th class="r">Pengeluaran</th><th class="r">Selisih</th></tr></thead><tbody>${rows}<tr class="tot-row"><td class="c"></td><td>TOTAL</td><td class="r">${rp(tM)}</td><td class="r">${rp(tK)}</td><td class="r">${rp(tM-tK)}</td></tr></tbody></table></div>`:`<div class="empty">Tidak ada data.</div>`}</div>`;
   }
   else if(j==='event'){
     const evs=DB.events.filter(e=>e.unit===u).sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?1:-1);
@@ -2096,7 +2193,7 @@ function pageLaporanKeuangan(uo){
   const fh=isO?'':`<div class="card no-print"><h3>💰 Laporan Keuangan</h3><div class="filters"><div><label>Tahun</label><select onchange="setFilter('lkTh',this.value)">${tl.map(t=>`<option value="${t}" ${t===th?'selected':''}>${esc(t)}</option>`).join('')}</select></div><div><label>Periode</label><select onchange="setFilter('lkBulan',this.value)"><option value="">Tahunan</option>${BULAN.map((b,i)=>`<option value="${String(i+1).padStart(2,'0')}" ${String(i+1).padStart(2,'0')===bl?'selected':''}>${b}</option>`).join('')}</select></div><div><label>&nbsp;</label><button class="btn sm" onclick="expLapKeuangan('${u}')">⬇ Excel</button></div><div><label>&nbsp;</label><button class="btn sm" onclick="cetakLapKeuangan('${u}')">🖨 Cetak/PDF</button></div></div></div>`;
   const ah=isO?`<div class="form-actions no-print" style="margin-bottom:14px"><button class="btn sm" onclick="expLapKeuangan('${u}')">⬇ Excel</button><button class="btn sm" onclick="cetakLapKeuangan('${u}')">🖨 Cetak/PDF</button></div>`:'';
   return `${fh}${ah}
-  <div class="cards"><div class="stat"><span>Kas Awal</span><strong>${rp(ka)}</strong><small>${esc(pl)}</small></div><div class="stat green"><span>Pemasukan</span><strong>${rp(tM)}</strong></div><div class="stat red"><span>Pengeluaran</span><strong>${rp(tK)}</strong></div><div class="stat amber"><span>Saldo Akhir</span><strong>${rp(sa)}</strong></div></div>
+  <div class="cards compact"><div class="stat compact"><span>Kas Awal</span><strong>${rp(ka)}</strong></div><div class="stat compact green"><span>Pemasukan</span><strong>${rp(tM)}</strong></div><div class="stat compact red"><span>Pengeluaran</span><strong>${rp(tK)}</strong></div><div class="stat compact amber"><span>Saldo Akhir</span><strong>${rp(sa)}</strong></div></div>
   <div class="card"><h3>📊 Arus Kas per Kategori — ${esc(pl)}</h3><div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Kategori</th><th class="r">Pemasukan</th><th class="r">Pengeluaran</th><th class="r">Subtotal</th></tr></thead><tbody><tr class="tot-row"><td class="c"></td><td><strong>KAS AWAL</strong></td><td class="r" colspan="2">—</td><td class="r"><strong>${rp(ka)}</strong></td></tr>${kr}<tr class="tot-row"><td class="c"></td><td><strong>SALDO AKHIR</strong></td><td class="r masuk">${rp(tM)}</td><td class="r keluar">${rp(tK)}</td><td class="r"><strong>${rp(sa)}</strong></td></tr></tbody></table></div></div>`;
 }
 function expLapKeuangan(unit){
@@ -2236,7 +2333,7 @@ function pageLaporanKetua(){
   const tM=hs.reduce((a,h)=>a+h.masuk,0),tK=hs.reduce((a,h)=>a+h.keluar,0),tA=hs.reduce((a,h)=>a+h.akhir,0);
   const pl=bl?`${BULAN[Number(bl)-1]} ${th}`:`Tahun ${th}`;
   let h=`<div class="card no-print"><h3>📚 Laporan Lengkap Semua Unit</h3><div class="filters"><div><label>Tahun</label><select onchange="setFilter('lkTh',this.value)">${tl.map(t=>`<option value="${t}" ${t===th?'selected':''}>${esc(t)}</option>`).join('')}</select></div><div><label>Periode</label><select onchange="setFilter('lkBl',this.value)"><option value="">Tahunan</option>${BULAN.map((b,i)=>`<option value="${String(i+1).padStart(2,'0')}" ${String(i+1).padStart(2,'0')===bl?'selected':''}>${b}</option>`).join('')}</select></div><div><label>Detail Unit</label><select onchange="setFilter('lkUnit',this.value)"><option value="">— Ringkasan —</option>${ALL_UNITS.map(un=>`<option value="${un}" ${un===du?'selected':''}>${esc(UNITS[un].nama)}</option>`).join('')}</select></div></div><div class="form-actions" style="margin-top:14px"><button class="btn sm" onclick="expLaporanKetua()">⬇ Excel</button><button class="btn sm" onclick="cetakLaporanKetua()">🖨 Cetak</button></div><div class="hint">💡 Tahun otomatis dikonversi untuk SD/TK.</div></div>
-  <div class="cards"><div class="stat purple"><span>Total Pemasukan</span><strong>${rp(tM)}</strong><small>${esc(pl)}</small></div><div class="stat red"><span>Total Pengeluaran</span><strong>${rp(tK)}</strong></div><div class="stat green"><span>Saldo Akhir</span><strong>${rp(tA)}</strong></div><div class="stat amber"><span>Jumlah Transaksi</span><strong>${num(hs.reduce((a,h)=>a+h.data.length,0))}</strong></div></div>`;
+  <div class="cards compact"><div class="stat compact purple"><span>Total Pemasukan</span><strong>${rp(tM)}</strong></div><div class="stat compact red"><span>Total Pengeluaran</span><strong>${rp(tK)}</strong></div><div class="stat compact green"><span>Saldo Akhir</span><strong>${rp(tA)}</strong></div><div class="stat compact amber"><span>Jumlah Transaksi</span><strong>${num(hs.reduce((a,h)=>a+h.data.length,0))}</strong></div></div>`;
   const rows=hs.map((h,i)=>`<tr><td class="c">${i+1}</td><td><strong>${esc(UNITS[h.un].nama)}</strong></td><td class="c">${esc(h.thU)}</td><td class="r">${rp(h.sa)}</td><td class="r masuk">${rp(h.masuk)}</td><td class="r keluar">${rp(h.keluar)}</td><td class="r"><strong>${rp(h.akhir)}</strong></td><td class="c no-print"><button class="btn xs primary" onclick="setFilter('lkUnit','${h.un}')">Detail</button></td></tr>`).join('');
   h+=`<div class="card"><h3>Ringkasan — ${esc(pl)}</h3><div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Unit</th><th class="c">Tahun</th><th class="r">Saldo Awal</th><th class="r">Masuk</th><th class="r">Keluar</th><th class="r">Saldo Akhir</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}<tr class="tot-row"><td class="c"></td><td colspan="2">TOTAL</td><td class="r">-</td><td class="r">${rp(tM)}</td><td class="r">${rp(tK)}</td><td class="r">${rp(tA)}</td><td class="no-print"></td></tr></tbody></table></div></div>`;
   if(du&&UNITS[du]){
