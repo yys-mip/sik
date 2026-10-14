@@ -69,6 +69,10 @@ textarea{resize:vertical;min-height:64px}
 .stat span{font-size:11.5px;color:var(--muted);display:block;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.4px}
 .stat strong{font-size:19px;color:var(--text);display:block;font-weight:700}
 .stat small{font-size:11px;color:#94a3b8;display:block;margin-top:4px}
+.stat.compact{padding:10px 12px;border-radius:10px}
+.stat.compact span{font-size:9.5px;margin-bottom:2px;letter-spacing:.2px}
+.stat.compact strong{font-size:14.5px}
+.cards.compact{grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
 .form-row{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
 .form-row label{font-size:12px;font-weight:600;color:var(--muted)}
@@ -122,6 +126,20 @@ table.tbl tbody tr:last-child td{border-bottom:none}
 .menu-tile .mt-ico{width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,#ccfbf1,#99f6e4);color:var(--primary-dark);display:flex;align-items:center;justify-content:center;font-size:22px}
 .menu-tile .mt-title{font-size:14px;font-weight:700;color:var(--text)}
 .menu-tile .mt-desc{font-size:11.5px;color:var(--muted);line-height:1.4}
+/* ===== Table Laporan Arus Kas (gaya gambar) ===== */
+table.tbl-kas{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:2px solid #000}
+table.tbl-kas th,table.tbl-kas td{border:1px solid #000;padding:6px 8px;vertical-align:middle}
+table.tbl-kas th{background:#fff;font-weight:700;text-align:center;font-size:12.5px;color:#000;text-transform:none;letter-spacing:0}
+table.tbl-kas td.c,table.tbl-kas th.c{text-align:center}
+table.tbl-kas td.r{text-align:right}
+table.tbl-kas tbody tr:hover{background:#fff}
+table.tbl-kas tr.row-total td{font-weight:700;font-size:14px;background:#f8fafc}
+table.tbl-kas tr.row-saldo td{font-weight:700;font-size:14px;background:#f1f5f9}
+body.dark table.tbl-kas{background:#1e293b;border-color:#cbd5e1}
+body.dark table.tbl-kas th,body.dark table.tbl-kas td{border-color:#94a3b8;color:#e2e8f0}
+body.dark table.tbl-kas th{background:#0f172a;color:#e2e8f0}
+body.dark table.tbl-kas tr.row-total td{background:#334155}
+body.dark table.tbl-kas tr.row-saldo td{background:#1e293b}
 @media(max-width:860px){#sidebar{transform:translateX(-100%);transition:.25s}#sidebar.open{transform:translateX(0)}#main{margin-left:0}.hamb{display:inline-flex !important}}
 .hamb{display:none;background:var(--primary);color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:16px}
 @media print{#sidebar,#topbar,.no-print,.btn,.floating-actions{display:none !important}#main{margin-left:0}#content{padding:0}.card{border:none;box-shadow:none;padding:0}}
@@ -185,6 +203,11 @@ body.dark .tabs .tab-btn.active{background:var(--primary-light);color:#04302d}
 .kelas-chk{display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 8px;border:1px solid var(--border);border-radius:8px;background:#f8fafc;font-size:12.5px;font-weight:600}
 .kelas-chk input{width:auto;margin:0}
 body.dark .kelas-chk{background:#334155;border-color:#475569}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.btn-row .btn{flex:0 0 auto}
+.btn-link{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;cursor:pointer;transition:.15s}
+.btn-link:hover{background:#ddd6fe}
+body.dark .btn-link{background:#5b21b6;color:#ddd6fe;border-color:#7c3aed}
 </style>
 </head>
 <body>
@@ -210,7 +233,7 @@ body.dark .kelas-chk{background:#334155;border-color:#475569}
       <div><h2 id="sbTitle">Yayasan Mutiara Islam</h2><small id="sbSub">Prembun</small></div>
     </div>
     <nav class="sb-menu" id="sbMenu"></nav>
-    <div class="sb-foot">v3.8 &middot; Supabase Multi-DB</div>
+    <div class="sb-foot">v3.9 &middot; Supabase Multi-DB</div>
   </aside>
   <div id="main">
     <div id="topbar"></div>
@@ -256,7 +279,7 @@ function defaultDB(){return{users:{},settings:{
   tk:{nama:"Ma'had TK Mutiara Islam Prembun",alamat:'Prembun, Kebumen',ketua:'',bendahara:'',logo:'',npwp:''}
 },years:{yayasan:[],maba:[],sd:[],tk:[]},transaksi:[],events:[],eventTrans:[],permohonan:[],siswa:[],biaya:{sd:{},tk:{}},pembayaran:[],guru:[],gajiGuru:[],gajiPembayaran:[],kegiatan:[],kegiatanTrans:[],kegiatanPembayaran:[]};}
 let DB=defaultDB();
-let state={user:null,page:'dashboard',ctxUnit:'yayasan',eventId:null,setingView:null,kegiatanId:null,kegiatanView:'ringkasan',loadedUnits:[]};
+let state={user:null,page:'dashboard',ctxUnit:'yayasan',eventId:null,setingView:null,kegiatanId:null,kegiatanView:'ringkasan',bendaharaEventId:null,loadedUnits:[]};
 const FILTER={};let showPasswords=false;
 let googleState={accessToken:null,expiresAt:0,userEmail:null,clientId:localStorage.getItem(GCLIENT_KEY)||''};
 
@@ -404,7 +427,7 @@ function komponenListUntukSiswa(u,s){
   return l;
 }
 function labelKasUnit(u){const t=UNITS[u]?.tipe;if(t==='yayasan')return 'Kas Yayasan';if(t==='unit')return 'Kas Masjid';if(t==='mahad')return 'Kas Sekolah';return 'Kas';}
-function labelAmbilKas(u){const t=UNITS[u]?.tipe;if(t==='yayasan')return 'Ambil Kas Yayasan';if(t==='unit')return 'Ambil Kas Masjid';if(t==='mahad')return 'Ambil dari Kas Sekolah';return 'Ambil dari Kas';}
+function labelAmbilKas(u){const t=UNITS[u]?.tipe;if(t==='yayasan')return 'Ambil Kas Yayasan';if(t==='unit')return 'Ambil Kas Masjid';if(t==='mahad')return 'Ambil Kas Sekolah';return 'Ambil Kas';}
 function labelSetorKas(u){const t=UNITS[u]?.tipe;if(t==='yayasan')return 'Setor ke Kas Yayasan';if(t==='unit')return 'Setor ke Kas Masjid';if(t==='mahad')return 'Setor ke Kas Sekolah';return 'Setor ke Kas';}
 function labelJenisPermohonan(p){if(!p)return '-';return p.jenis==='minta'?'Ajukan Dana ke Yayasan':'Setor Dana ke Yayasan';}
 function shortUnitName(u){const t=UNITS[u]?.tipe;if(t==='yayasan')return 'Yayasan';if(t==='unit')return 'Masjid';if(t==='mahad')return u==='sd'?'SD':'TK';return 'Unit';}
@@ -458,6 +481,7 @@ table.data td.r,table.data th.r{text-align:right}
 table.data td.c,table.data th.c{text-align:center}
 table.data tbody tr:nth-child(even){background:#fafafa}
 table.data tfoot td{font-weight:700;background:#f1f5f9;border-top:2px solid #333}
+table.data tbody tr.tot-lap-kas td{font-weight:700;background:#f1f5f9;border-top:2px solid #333;font-size:11pt}
 .empty-row{text-align:center;color:#64748b;font-style:italic;padding:20px}
 .pengesahan{margin-top:30px;page-break-inside:avoid}
 .pengesahan .tanggal{text-align:right;margin-bottom:6px;font-size:11pt;padding-right:24px}
@@ -482,6 +506,135 @@ ${subtitle?`<div class="subtitle">${esc(subtitle)}</div>`:''}
 </tr></table></div>
 <script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body></html>`;
   w.document.write(doc);w.document.close();
+}
+
+/* ============ CETAK PDF LAPORAN ARUS KAS (format khusus) ============ */
+function cetakLaporanArusKasPDF(title, subtitle, items, unitOverride, opts){
+  opts = opts || {};
+  const w = window.open('','_blank'); if(!w){toast('Popup diblokir','error');return;}
+  const uk = unitOverride || state.ctxUnit;
+  const s = DB.settings[uk] || {};
+  const jab = jabatanPimpinan(uk);
+  let tglStr;
+  if(opts.tanggal){const [y,m,d]=String(opts.tanggal).split('-');tglStr=`${Number(d)} ${BULAN[Number(m)-1]} ${y}`;}else{const n=new Date();tglStr=`${n.getDate()} ${BULAN[n.getMonth()]} ${n.getFullYear()}`;}
+  const kota = opts.kota || 'Prembun';
+  // items: [{tgl, kategori, keterangan, masuk, keluar}]
+  const tM = items.reduce((a,b)=>a+(Number(b.masuk)||0),0);
+  const tK = items.reduce((a,b)=>a+(Number(b.keluar)||0),0);
+  const saldo = tM - tK;
+  const rowsHtml = items.length
+    ? items.map((it,i)=>`<tr>
+        <td class="c">${i+1}</td>
+        <td>${it.tgl?fmtTgl(it.tgl):''}</td>
+        <td>${esc(it.kategori||'')}</td>
+        <td>${esc(it.keterangan||'')}</td>
+        <td class="r">${it.masuk?rp(it.masuk):''}</td>
+        <td class="r">${it.keluar?rp(it.keluar):''}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="6" class="empty-row">— Tidak ada data —</td></tr>`;
+  const logoHtml = s.logo ? `<img src="${s.logo}">` : `<div class="kop-placeholder">🕌</div>`;
+  const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>
+@page{size:A4 portrait;margin:1.5cm}*{box-sizing:border-box}
+body{font-family:'Times New Roman',Times,serif;color:#000;padding:0;margin:0;font-size:11pt;line-height:1.4}
+.kop{display:flex;align-items:center;justify-content:center;gap:20px;padding-bottom:8px}
+.kop img{height:82px;width:auto}
+.kop-placeholder{height:82px;width:82px;border-radius:50%;background:#0f766e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:42px}
+.kop-text{text-align:center}
+.kop-text h1{font-size:17pt;margin:0 0 2px;font-weight:700;color:#0b3b38;text-transform:uppercase}
+.kop-text .alamat{font-size:10.5pt;color:#1e293b;margin:0;font-style:italic}
+.kop-line-double{border-top:3px double #000;margin-top:6px;margin-bottom:20px}
+h2.judul{text-align:center;font-size:14pt;font-weight:700;margin:0 0 4px;text-transform:uppercase;text-decoration:underline}
+.subtitle{text-align:center;font-size:11pt;margin:0 0 18px;color:#1e293b}
+table.kas{width:100%;border-collapse:collapse;font-size:10.5pt;margin-bottom:24px;border:2px solid #000}
+table.kas th,table.kas td{border:1px solid #000;padding:6px 8px;vertical-align:middle}
+table.kas th{background:#fff;font-weight:700;text-align:center;font-size:10.5pt;text-transform:none;letter-spacing:0;color:#000}
+table.kas td.c{text-align:center}
+table.kas td.r{text-align:right}
+table.kas tr.row-total td{font-weight:700;font-size:11.5pt;background:#f8fafc}
+table.kas tr.row-saldo td{font-weight:700;font-size:11.5pt;background:#f1f5f9}
+.empty-row{text-align:center;color:#64748b;font-style:italic;padding:16px}
+.pengesahan{margin-top:30px;page-break-inside:avoid}
+.pengesahan .tanggal{text-align:right;margin-bottom:6px;font-size:11pt;padding-right:24px}
+.pengesahan table.ttd{width:100%;border:none;border-collapse:collapse;margin-top:4px}
+.pengesahan table.ttd td{border:none;text-align:center;vertical-align:top;font-size:11pt;padding:0;width:50%}
+.pengesahan .jabatan{font-weight:600;margin-bottom:2px}
+.pengesahan .ttd-teks{margin:6px 0;color:#1e293b;font-style:italic;font-size:10.5pt}
+.pengesahan .garis-ttd{display:inline-block;border-bottom:1px solid #333;min-width:160px;margin:46px 0 4px}
+.pengesahan .nama-bawah{font-weight:700;display:block;margin-top:2px}
+</style></head><body>
+<div class="kop">${logoHtml}<div class="kop-text"><h1>${esc(s.nama||UNITS[uk].nama)}</h1><p class="alamat">${esc(s.alamat||'')}</p></div></div>
+<div class="kop-line-double"></div>
+<h2 class="judul">${esc(title)}</h2>
+${subtitle?`<div class="subtitle">${esc(subtitle)}</div>`:''}
+<table class="kas">
+  <thead><tr>
+    <th style="width:35px">No</th>
+    <th style="width:75px">Tgl</th>
+    <th style="width:120px">Kategori</th>
+    <th>Keterangan</th>
+    <th style="width:110px">Pemasukan</th>
+    <th style="width:110px">Pengeluaran</th>
+  </tr></thead>
+  <tbody>
+    ${rowsHtml}
+    <tr class="row-total">
+      <td colspan="4" class="c" style="font-size:13pt">Total</td>
+      <td class="r">${tM?rp(tM):''}</td>
+      <td class="r">${tK?rp(tK):''}</td>
+    </tr>
+    <tr class="row-saldo">
+      <td colspan="4" class="c" style="font-size:13pt">Saldo</td>
+      <td colspan="2" class="c" style="font-size:14pt">${rp(saldo)}</td>
+    </tr>
+  </tbody>
+</table>
+<div class="pengesahan"><div class="tanggal">${esc(kota)}, ${esc(tglStr)}</div>
+<table class="ttd"><tr>
+<td><div class="jabatan">${esc(jab)},</div><div class="ttd-teks">ttd</div><div class="garis-ttd"></div><span class="nama-bawah">${esc(s.ketua||'....................................')}</span></td>
+<td><div class="jabatan">Bendahara,</div><div class="ttd-teks">ttd</div><div class="garis-ttd"></div><span class="nama-bawah">${esc(s.bendahara||'....................................')}</span></td>
+</tr></table></div>
+<script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body></html>`;
+  w.document.write(doc); w.document.close();
+}
+
+/* ============ Helper HTML: Tabel Laporan Arus Kas (gaya gambar) ============ */
+function renderTabelArusKas(items, opts){
+  opts = opts || {};
+  const tM = items.reduce((a,b)=>a+(Number(b.masuk)||0),0);
+  const tK = items.reduce((a,b)=>a+(Number(b.keluar)||0),0);
+  const saldo = tM - tK;
+  const rows = items.length
+    ? items.map((it,i)=>`<tr>
+        <td class="c">${i+1}</td>
+        <td>${it.tgl?fmtTgl(it.tgl):''}</td>
+        <td>${esc(it.kategori||'')}</td>
+        <td>${esc(it.keterangan||'')}</td>
+        <td class="r">${it.masuk?rp(it.masuk):''}</td>
+        <td class="r">${it.keluar?rp(it.keluar):''}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="6" class="empty">— Tidak ada data —</td></tr>`;
+  return `<div class="tbl-wrap" style="border:2px solid #000;border-radius:0"><table class="tbl-kas">
+    <thead><tr>
+      <th style="width:40px">No</th>
+      <th style="width:90px">Tgl</th>
+      <th style="width:140px">Kategori</th>
+      <th>Keterangan</th>
+      <th style="width:130px">Pemasukan</th>
+      <th style="width:130px">Pengeluaran</th>
+    </tr></thead>
+    <tbody>
+      ${rows}
+      <tr class="row-total">
+        <td colspan="4" class="c" style="font-size:14px">Total</td>
+        <td class="r masuk">${tM?rp(tM):''}</td>
+        <td class="r keluar">${tK?rp(tK):''}</td>
+      </tr>
+      <tr class="row-saldo">
+        <td colspan="4" class="c" style="font-size:14px">Saldo</td>
+        <td colspan="2" class="c" style="font-size:15px;font-weight:700;color:${saldo>=0?'#16a34a':'#dc2626'}">${rp(saldo)}</td>
+      </tr>
+    </tbody>
+  </table></div>`;
 }
 
 /* ============ SALDO HELPERS ============ */
@@ -528,24 +681,44 @@ async function doLogin(e){
   }catch(err){console.error(err);toast('Error login: '+(err.message||err),'error');}
   finally{btn.textContent=orig;btn.disabled=false;}
 }
-function logout(){if(!confirm('Keluar dari sistem?'))return;state.user=null;state.setingView=null;state.kegiatanId=null;state.loadedUnits=[];showPasswords=false;DB=defaultDB();document.getElementById('app').style.display='none';document.getElementById('loginPage').style.display='flex';document.getElementById('loginPass').value='';document.getElementById('loginUser').value='';loadYayasanLogo();}
+function logout(){if(!confirm('Keluar dari sistem?'))return;state.user=null;state.setingView=null;state.kegiatanId=null;state.bendaharaEventId=null;state.loadedUnits=[];showPasswords=false;DB=defaultDB();document.getElementById('app').style.display='none';document.getElementById('loginPage').style.display='flex';document.getElementById('loginPass').value='';document.getElementById('loginUser').value='';loadYayasanLogo();}
 async function loadYayasanLogo(){try{const {data}=await sb1.from('app_units').select('settings').eq('unit_key','yayasan').maybeSingle();if(data&&data.settings&&data.settings.logo)DB.settings.yayasan.logo=data.settings.logo;}catch(e){}updateLoginLogo();}
 
 /* ============ MENU ============ */
 function menusFor(){
   const r=state.user.role;
+  // Bendahara Program: hanya 1 menu
   if(r==='bendahara_program')return [{id:'programSaya',label:'Program Donasi Saya',ico:'🎉'}];
+  // Jamaah: hanya laporan
   if(r==='jamaah')return [{id:'laporanMasjid',label:'Laporan Masjid',ico:'🕌'},{id:'laporanYayasan',label:'Laporan Yayasan',ico:'🏛️'}];
+  // Admin: semua akses yayasan
   if(r==='admin')return [
     {id:'dashboard',label:'Dashboard',ico:'📊'},{id:'seting',label:'Seting & User',ico:'⚙️'},
     {id:'tahun',label:'Tahun Anggaran',ico:'📅'},{id:'transaksi',label:'Transaksi',ico:'💵'},
     {id:'event',label:'Program Donasi',ico:'🎉'},{id:'persetujuan',label:'Persetujuan Anggaran',ico:'✅'},
     {id:'laporan',label:'Laporan',ico:'📈'}
   ];
+  // Ketua: dashboard, laporan, laporan lengkap, persetujuan
   if(r==='ketua')return [
     {id:'dashboard',label:'Dashboard',ico:'📊'},{id:'laporan',label:'Laporan',ico:'📈'},
     {id:'laporanKetua',label:'Laporan Lengkap',ico:'📚'},{id:'persetujuan',label:'Persetujuan Anggaran',ico:'✅'}
   ];
+  // YAYASAN: full akses di yayasan; jika pindah unit → hanya laporan
+  if(r==='yayasan'){
+    if(state.ctxUnit !== 'yayasan'){
+      return [{id:'laporan',label:'Laporan (Read-only)',ico:'📈'}];
+    }
+    return [
+      {id:'dashboard',label:'Dashboard',ico:'📊'},
+      {id:'seting',label:'Seting',ico:'⚙️'},
+      {id:'tahun',label:'Tahun Anggaran',ico:'📅'},
+      {id:'transaksi',label:'Transaksi',ico:'💵'},
+      {id:'event',label:'Program Donasi',ico:'🎉'},
+      {id:'persetujuan',label:'Persetujuan Anggaran',ico:'✅'},
+      {id:'laporan',label:'Laporan',ico:'📈'}
+    ];
+  }
+  // Unit / Mahad (SD, TK, Masjid) — menu lengkap sesuai tipe unit
   const u=state.ctxUnit,tp=UNITS[u].tipe;
   const m=[{id:'dashboard',label:'Dashboard',ico:'📊'},{id:'seting',label:'Seting',ico:'⚙️'},{id:'tahun',label:labelTahun(u),ico:'📅'}];
   if(tp==='mahad'){
@@ -557,8 +730,7 @@ function menusFor(){
     return m;
   }
   m.push({id:'transaksi',label:'Transaksi',ico:'💵'},{id:'event',label:'Program Donasi',ico:'🎉'});
-  if(tp==='yayasan')m.push({id:'persetujuan',label:'Persetujuan Anggaran',ico:'✅'});
-  else m.push({id:'permohonan',label:'Permohonan Dana',ico:'📤'});
+  m.push({id:'permohonan',label:'Permohonan Dana',ico:'📤'});
   m.push({id:'laporan',label:'Laporan',ico:'📈'});
   return m;
 }
@@ -568,6 +740,7 @@ function renderSidebar(){
   if(state.page==='eventDetail')ap='event';
   if(state.page==='kegiatanDetail')ap='kegiatan';
   if(state.page==='programSaya')ap='programSaya';
+  if(state.page==='bendaharaProgram')ap='event';
   const s=DB.settings[state.ctxUnit]||{};
   let title=(s.nama||UNITS[state.ctxUnit].nama).slice(0,34);
   if(state.user.role==='bendahara_program'&&state.user.programId){
@@ -592,7 +765,7 @@ function renderTopbar(){
   const isDark=document.body.classList.contains('dark');
   document.getElementById('topbar').innerHTML=`<div style="display:flex;align-items:center;gap:12px"><button class="hamb" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>${left}</div><div class="tb-right"><span class="tb-user">${esc(state.user.nama)} <small>&middot; ${esc(roleLabel(r))}</small></span><button class="btn ghost sm dark-toggle-btn" onclick="toggleDark()" title="Mode Gelap">${isDark?'☀️':'🌙'}</button><button class="btn ghost sm" onclick="logout()">Keluar</button></div>`;
 }
-function go(page){if(state.page!==page)state.setingView=null;state.page=page;if(page!=='eventDetail')state.eventId=null;if(page!=='kegiatanDetail'){state.kegiatanId=null;state.kegiatanView='ringkasan';}document.getElementById('sidebar').classList.remove('open');render();}
+function go(page){if(state.page!==page)state.setingView=null;state.page=page;if(page!=='eventDetail'&&page!=='bendaharaProgram')state.eventId=null;if(page!=='kegiatanDetail'){state.kegiatanId=null;state.kegiatanView='ringkasan';}document.getElementById('sidebar').classList.remove('open');render();}
 function setSetingView(v){state.setingView=v;render();}
 function setKegiatanView(v){state.kegiatanView=v;render();}
 function gantiUnit(u){state.ctxUnit=u;state.page='dashboard';state.setingView=null;render();}
@@ -615,6 +788,7 @@ function renderPage(){
     case 'kegiatanDetail':h=pageKegiatanDetail();break;
     case 'event':h=pageEvent();break;
     case 'eventDetail':h=pageEventDetail();break;
+    case 'bendaharaProgram':h=pageBendaharaProgram();break;
     case 'programSaya':h=pageProgramSaya();break;
     case 'permohonan':h=pagePermohonan();break;
     case 'persetujuan':h=pagePersetujuan();break;
@@ -628,10 +802,10 @@ function renderPage(){
 }
 function dashboardFloatingButtons(){
   const u=state.ctxUnit,tp=UNITS[u].tipe,r=state.user.role;
-  if(r==='jamaah'||r==='ketua'||r==='bendahara_program')return '';
+  if(r==='jamaah'||r==='ketua'||r==='bendahara_program'||r==='yayasan')return '';
   let b='';
   if(tp==='mahad')b=`<button class="btn accent" onclick="formPembayaranModal()">💳 Pembayaran Siswa</button><button class="btn primary" onclick="formTransaksiModal()">➕ Input Transaksi</button>`;
-  else if(tp==='yayasan'||tp==='unit')b=`<button class="btn primary" onclick="formTransaksiModal()">➕ Input Transaksi</button>`;
+  else if(tp==='unit')b=`<button class="btn primary" onclick="formTransaksiModal()">➕ Input Transaksi</button>`;
   if(!b)return '';
   return `<div class="floating-actions no-print">${b}</div>`;
 }
@@ -664,13 +838,10 @@ function pageDashboard(){
     const pending=DB.permohonan.filter(p=>p.status==='pending').length;
     if(pending>0)h+=`<div class="card" style="border-left:4px solid var(--accent)"><h3>⏳ Menunggu Persetujuan</h3><p style="font-size:13px;color:var(--muted)">Terdapat <strong>${pending}</strong> permohonan menunggu persetujuan.<button class="btn accent sm" style="margin-left:10px" onclick="go('persetujuan')">Lihat</button></p></div>`;
   }
-  const last=DB.transaksi.filter(t=>t.unit===u).sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?1:-1).slice(0,8);
-  h+=`<div class="card"><h3>Transaksi Terakhir — ${esc(UNITS[u].nama)}</h3>`;
-  if(!last.length)h+=`<div class="empty">Belum ada transaksi.</div>`;
-  else{
-    h+=`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tanggal</th><th>Kategori</th><th>Keterangan</th><th class="r">Masuk</th><th class="r">Keluar</th></tr></thead><tbody>${last.map((t,i)=>`<tr><td class="c">${i+1}</td><td>${fmtTgl(t.tanggal)}</td><td>${esc(t.kategori)}</td><td>${esc(t.keterangan||'-')}</td><td class="r masuk">${t.jenis==='masuk'?rp(t.jumlah):'-'}</td><td class="r keluar">${t.jenis==='keluar'?rp(t.jumlah):'-'}</td></tr>`).join('')}</tbody></table></div>`;
-  }
-  h+=`</div>`;
+  // Laporan arus kas (gaya gambar) untuk transaksi terakhir
+  const thData=DB.transaksi.filter(t=>t.unit===u&&t.tahun===th).sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);
+  const itemsKas=thData.map(t=>({tgl:t.tanggal,kategori:t.kategori,keterangan:t.keterangan,masuk:t.jenis==='masuk'?Number(t.jumlah):0,keluar:t.jenis==='keluar'?Number(t.jumlah):0}));
+  h+=`<div class="card"><h3>📋 Laporan Arus Kas — ${esc(UNITS[u].nama)} (${esc(th)})</h3>${renderTabelArusKas(itemsKas)}</div>`;
   const evs=DB.events.filter(e=>e.unit===u&&!e.selesai);
   if(evs.length){
     h+=`<div class="card"><h3>Program Donasi Aktif</h3><div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c no-print">Kelola</th><th>Nama Program</th><th>Tanggal</th><th class="r">Dana Terkumpul</th></tr></thead><tbody>${evs.slice(-5).map(e=>`<tr><td class="c no-print"><button class="btn xs primary" onclick="bukaEvent('${e.id}')">Kelola</button></td><td>${esc(e.nama)}</td><td>${fmtTgl(e.tanggal)}</td><td class="r ${saldoEvent(e.id)>=0?'masuk':'keluar'}">${rp(saldoEvent(e.id))}</td></tr>`).join('')}</tbody></table></div></div>`;
@@ -865,7 +1036,7 @@ function buatBackupTahun(u,tahun){
   const y=(DB.years[u]||[]).find(x=>x.tahun===tahun);
   const d={settings:DB.settings[u]||{},year:y||null,transaksi:DB.transaksi.filter(t=>t.unit===u&&t.tahun===tahun),pembayaran:isM?DB.pembayaran.filter(p=>p.unit===u&&(p.tanggal||'').slice(0,4)===ys):[]};
   if(isM){d.siswa=DB.siswa.filter(s=>s.unit===u);d.biaya=DB.biaya[u]||{};d.guru=DB.guru.filter(g=>g.unit===u);d.gajiGuru=DB.gajiGuru.filter(g=>g.unit===u);d.gajiPembayaran=DB.gajiPembayaran.filter(g=>g.unit===u&&(g.tanggal||'').slice(0,4)===ys);d.kegiatan=DB.kegiatan.filter(k=>k.unit===u);d.kegiatanTrans=DB.kegiatanTrans.filter(k=>k.unit===u);d.kegiatanPembayaran=DB.kegiatanPembayaran.filter(k=>k.unit===u);}
-  return {app:'MIP-Keuangan',version:6,type:'per-tahun',unitKey:u,unitNama:UNITS[u].nama,tipe:tp,labelTahun:labelTahun(u),tahun,exportedAt:new Date().toISOString(),exportedBy:state.user.nama,data:d};
+  return {app:'MIP-Keuangan',version:7,type:'per-tahun',unitKey:u,unitNama:UNITS[u].nama,tipe:tp,labelTahun:labelTahun(u),tahun,exportedAt:new Date().toISOString(),exportedBy:state.user.nama,data:d};
 }
 function backupTahunUnit(){const u=state.ctxUnit;const th=document.getElementById('bkTahun').value;const b=buatBackupTahun(u,th);const fn=`backup_${u}_${th.replace('/','-')}_${todayStr()}.json`;downloadJSON(b,fn);toast('Backup diunduh: '+fn,'ok');}
 function restoreTahunUnit(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{try{const b=JSON.parse(e.target.result);if(!b.app||b.app!=='MIP-Keuangan')throw new Error('Bukan backup sistem');if(b.type!=='per-tahun')throw new Error('Jenis backup tidak sesuai');if(!confirm(`Restore data ${b.labelTahun} ${b.tahun} dari ${b.unitNama}?`)){ev.target.value='';return;}applyBackupTahun(b);saveDB();toast('Data di-restore','ok');ev.target.value='';render();}catch(err){toast('Gagal: '+err.message,'error');ev.target.value='';}};r.readAsText(f);}
@@ -901,7 +1072,7 @@ function googleSignOut(){if(googleState.accessToken&&window.google?.accounts?.oa
 async function backupToDrive(){
   if(!googleState.accessToken||Date.now()>googleState.expiresAt){toast('Sesi berakhir','error');return;}
   try{
-    const b={app:'MIP-Keuangan',version:6,type:'full',exportedAt:new Date().toISOString(),exportedBy:state.user.nama,data:DB};
+    const b={app:'MIP-Keuangan',version:7,type:'full',exportedAt:new Date().toISOString(),exportedBy:state.user.nama,data:DB};
     const fn=`mip-backup-${new Date().toISOString().slice(0,10)}.json`;
     const body=JSON.stringify(b);
     const q=encodeURIComponent(`name='${fn}'`);
@@ -949,7 +1120,7 @@ async function downloadAndRestoreDrive(fid,fn){
     if(!DB.users[state.user.username])logout();else render();
   }catch(e){toast('Gagal: '+e.message,'error');}
 }
-function backupFullLocal(){const b={app:'MIP-Keuangan',version:6,type:'full',exportedAt:new Date().toISOString(),exportedBy:state.user.nama,data:DB};const fn=`mip-backup-full-${todayStr()}.json`;downloadJSON(b,fn);toast('Backup: '+fn,'ok');}
+function backupFullLocal(){const b={app:'MIP-Keuangan',version:7,type:'full',exportedAt:new Date().toISOString(),exportedBy:state.user.nama,data:DB};const fn=`mip-backup-full-${todayStr()}.json`;downloadJSON(b,fn);toast('Backup: '+fn,'ok');}
 function restoreFullLocal(ev){
   const f=ev.target.files[0];if(!f)return;
   const r=new FileReader();
@@ -1020,7 +1191,7 @@ function doResetPassword(u){const b=document.getElementById('rpBaru').value,k=do
 function resetPasswordCepat(){const u=document.getElementById('rpUser').value;const b=document.getElementById('rpBaruCepat').value;const k=document.getElementById('rpKonfCepat').value;if(!DB.users[u]){toast('User tidak ada','error');return;}if(b.length<3){toast('Min 3','error');return;}if(b!==k){toast('Konfirmasi salah','error');return;}DB.users[u].pass=b;saveUsers();document.getElementById('rpBaruCepat').value='';document.getElementById('rpKonfCepat').value='';toast('Direset','ok');}
 function hapusUser(u){if(u===state.user.username){toast('Tidak dapat hapus sendiri','error');return;}if(!DB.users[u])return;if(!confirm(`Hapus user "${u}"?`))return;delete DB.users[u];saveUsers();toast('Dihapus','ok');render();}
 
-/* ============ TRANSAKSI ============ */
+/* ============ TRANSAKSI (format laporan arus kas) ============ */
 function dataTransFilter(){const u=state.ctxUnit;const th=FILTER.trTahun||tahunAktif(u);const bl=FILTER.trBulan||'';const jn=FILTER.trJenis||'';const da=FILTER.trDari||'';const sa=FILTER.trSampai||'';let d=DB.transaksi.filter(t=>t.unit===u);if(da||sa){if(da)d=d.filter(t=>(t.tanggal||'')>=da);if(sa)d=d.filter(t=>(t.tanggal||'')<=sa);}else{if(th)d=d.filter(t=>t.tahun===th);if(bl)d=d.filter(t=>(t.tanggal||'').slice(5,7)===bl);}if(jn)d=d.filter(t=>t.jenis===jn);return d.sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);}
 function pageTransaksi(){
   const u=state.ctxUnit;
@@ -1029,7 +1200,8 @@ function pageTransaksi(){
   const data=dataTransFilter();
   const tm=data.filter(t=>t.jenis==='masuk').reduce((a,b)=>a+Number(b.jumlah),0);
   const tk=data.filter(t=>t.jenis==='keluar').reduce((a,b)=>a+Number(b.jumlah),0);
-  const rows=data.map((t,i)=>{const lk=!!t.refId;return `<tr><td class="c">${i+1}</td><td>${fmtTgl(t.tanggal)}</td><td><span class="badge ${t.jenis==='masuk'?'ok':'no'}">${t.jenis==='masuk'?'Masuk':'Keluar'}</span></td><td>${esc(t.kategori)}</td><td>${esc(t.keterangan||'-')}</td><td class="r ${t.jenis==='masuk'?'masuk':'keluar'}">${rp(t.jumlah)}</td><td class="c no-print">${lk?`<span class="lock-badge" title="Transaksi terkunci.">🔒 Terkunci</span>`:`<button class="btn xs" onclick="formTransaksiModal('${t.id}')">Edit</button><button class="btn xs danger" onclick="hapusTrans('${t.id}')">Hapus</button>`}</td></tr>`;}).join('');
+  // Table data (interactive, dengan tombol aksi)
+  const rows=data.map((t,i)=>{const lk=!!t.refId;return `<tr><td class="c">${i+1}</td><td>${fmtTgl(t.tanggal)}</td><td><span class="badge ${t.jenis==='masuk'?'ok':'no'}">${t.jenis==='masuk'?'Masuk':'Keluar'}</span></td><td>${esc(t.kategori)}</td><td>${esc(t.keterangan||'-')}</td><td class="r masuk">${t.jenis==='masuk'?rp(t.jumlah):'-'}</td><td class="r keluar">${t.jenis==='keluar'?rp(t.jumlah):'-'}</td><td class="c no-print">${lk?`<span class="lock-badge" title="Transaksi terkunci.">🔒</span>`:`<button class="btn xs" onclick="formTransaksiModal('${t.id}')">Edit</button><button class="btn xs danger" onclick="hapusTrans('${t.id}')">Hapus</button>`}</td></tr>`;}).join('');
   return `<div class="card no-print"><h3>💵 Transaksi<span class="h3-actions"><button class="btn sm primary" onclick="formTransaksiModal()">➕ Input Transaksi</button></span></h3>
   <div class="filters"><div><label>Tahun</label><select onchange="setFilter('trTahun',this.value)">${tl.map(t=>`<option value="${t}" ${t===th?'selected':''}>${esc(t)}</option>`).join('')}</select></div>
   <div><label>Bulan</label><select onchange="setFilter('trBulan',this.value)"><option value="">Semua</option>${BULAN.map((b,i)=>`<option value="${String(i+1).padStart(2,'0')}" ${String(i+1).padStart(2,'0')===bl?'selected':''}>${b}</option>`).join('')}</select></div>
@@ -1037,9 +1209,18 @@ function pageTransaksi(){
   <div style="min-width:150px"><label>Sampai</label><input type="date" value="${esc(sa)}" onchange="setFilter('trSampai',this.value)"></div>
   <div><label>Jenis</label><select onchange="setFilter('trJenis',this.value)"><option value="">Semua</option><option value="masuk" ${jn==='masuk'?'selected':''}>Pemasukan</option><option value="keluar" ${jn==='keluar'?'selected':''}>Pengeluaran</option></select></div>
   <button class="btn ghost sm" onclick="resetFilterTrans()">↺ Reset</button></div></div>
-  <div class="cards"><div class="stat green"><span>Total Pemasukan</span><strong>${rp(tm)}</strong></div><div class="stat red"><span>Total Pengeluaran</span><strong>${rp(tk)}</strong></div><div class="stat amber"><span>Saldo</span><strong>${rp(tm-tk)}</strong></div><div class="stat"><span>Jumlah</span><strong>${num(data.length)}</strong></div></div>
-  <div class="card"><h3>Daftar Transaksi<span class="h3-actions no-print"><button class="btn sm" onclick="expTrans()">⬇ Excel</button><button class="btn sm" onclick="cetakTrans()">🖨 Cetak</button></span></h3>
-  ${data.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Jenis</th><th>Kategori</th><th>Keterangan</th><th class="r">Jumlah</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}<tr class="tot-row"><td colspan="5">TOTAL MASUK</td><td class="r masuk">${rp(tm)}</td><td class="no-print"></td></tr><tr class="tot-row"><td colspan="5">TOTAL KELUAR</td><td class="r keluar">${rp(tk)}</td><td class="no-print"></td></tr><tr class="tot-row"><td colspan="5">SALDO</td><td class="r">${rp(tm-tk)}</td><td class="no-print"></td></tr></tbody></table></div>`:`<div class="empty">Tidak ada.</div>`}</div>`;
+  <div class="cards">
+    <div class="stat green"><span>Total Pemasukan</span><strong>${rp(tm)}</strong></div>
+    <div class="stat red"><span>Total Pengeluaran</span><strong>${rp(tk)}</strong></div>
+    <div class="stat amber"><span>Saldo</span><strong>${rp(tm-tk)}</strong></div>
+    <div class="stat"><span>Jumlah</span><strong>${num(data.length)}</strong></div>
+  </div>
+  <div class="card no-print">
+    <h3>Daftar Transaksi<span class="h3-actions no-print"><button class="btn sm" onclick="expTrans()">⬇ Excel</button><button class="btn sm" onclick="cetakTrans()">🖨 Cetak Laporan</button></span></h3>
+    <div class="hint" style="margin-bottom:10px">Klik <strong>Cetak Laporan</strong> untuk mencetak format Laporan Arus Kas.</div>
+    ${data.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Jenis</th><th>Kategori</th><th>Keterangan</th><th class="r">Masuk</th><th class="r">Keluar</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}<tr class="tot-row"><td colspan="5">TOTAL MASUK</td><td class="r masuk">${rp(tm)}</td><td class="no-print" colspan="2"></td></tr><tr class="tot-row"><td colspan="5">TOTAL KELUAR</td><td class="r keluar">${rp(tk)}</td><td class="no-print" colspan="2"></td></tr><tr class="tot-row"><td colspan="5">SALDO</td><td class="r" colspan="3">${rp(tm-tk)}</td></tr></tbody></table></div>`:`<div class="empty">Tidak ada.</div>`}
+  </div>
+  <div class="card"><h3>📋 Laporan Arus Kas</h3>${renderTabelArusKas(data.map(t=>({tgl:t.tanggal,kategori:t.kategori,keterangan:t.keterangan,masuk:t.jenis==='masuk'?Number(t.jumlah):0,keluar:t.jenis==='keluar'?Number(t.jumlah):0})))}</div>`;
 }
 function resetFilterTrans(){delete FILTER.trTahun;delete FILTER.trBulan;delete FILTER.trJenis;delete FILTER.trDari;delete FILTER.trSampai;render();}
 function formTransaksiModal(id){
@@ -1066,11 +1247,10 @@ function hapusTrans(id){const t=DB.transaksi.find(x=>x.id===id);if(!t)return;if(
 function expTrans(){const d=dataTransFilter();exportExcel('transaksi_'+state.ctxUnit,['No','Tanggal','Jenis','Kategori','Keterangan','Jumlah'],d.map((t,i)=>[i+1,fmtTgl(t.tanggal),t.jenis==='masuk'?'Masuk':'Keluar',t.kategori,t.keterangan||'',Number(t.jumlah)]));}
 function cetakTrans(){
   const u=state.ctxUnit;const d=dataTransFilter();
-  const tm=d.filter(t=>t.jenis==='masuk').reduce((a,b)=>a+Number(b.jumlah),0);
-  const tk=d.filter(t=>t.jenis==='keluar').reduce((a,b)=>a+Number(b.jumlah),0);
   let p;if(FILTER.trDari||FILTER.trSampai)p=`Rentang: ${FILTER.trDari?fmtTgl(FILTER.trDari):'...'} s/d ${FILTER.trSampai?fmtTgl(FILTER.trSampai):'...'}`;else p=`Periode ${FILTER.trBulan?BULAN[Number(FILTER.trBulan)-1]+' ':''}${FILTER.trTahun||tahunAktif(u)}`;
   const ta=tanggalAkhirPeriode(u,{sampai:FILTER.trSampai,th:FILTER.trTahun||tahunAktif(u),bl:FILTER.trBulan});
-  cetakPDF('Laporan Transaksi Kas',p,['No','Tanggal','Jenis','Kategori','Keterangan','Jumlah'],d.map((t,i)=>[i+1,fmtTgl(t.tanggal),t.jenis==='masuk'?'Masuk':'Keluar',t.kategori,t.keterangan||'-',rp(t.jumlah)]),['','TOTAL','','','Masuk '+rp(tm)+' / Keluar '+rp(tk),rp(tm-tk)],null,{tanggal:ta});
+  const items=d.map(t=>({tgl:t.tanggal,kategori:t.kategori,keterangan:t.keterangan,masuk:t.jenis==='masuk'?Number(t.jumlah):0,keluar:t.jenis==='keluar'?Number(t.jumlah):0}));
+  cetakLaporanArusKasPDF('Laporan Arus Kas', p, items, null, {tanggal:ta});
 }
 
 /* ============ BAYAR GAJI ============ */
@@ -1288,7 +1468,6 @@ function simpanKegiatan(editId){
 function hapusKegiatan(id){if(!confirm('Hapus kegiatan + semua transaksi & pembayaran?'))return;const ri=DB.kegiatanTrans.filter(t=>t.kegiatanId===id&&t.refId).map(t=>t.refId);DB.transaksi=DB.transaksi.filter(t=>!ri.includes(t.refId));DB.kegiatan=DB.kegiatan.filter(k=>k.id!==id);DB.kegiatanTrans=DB.kegiatanTrans.filter(t=>t.kegiatanId!==id);DB.kegiatanPembayaran=DB.kegiatanPembayaran.filter(p=>p.kegiatanId!==id);saveDB();toast('Dihapus','ok');render();}
 function bukaKegiatan(id){state.kegiatanId=id;state.kegiatanView='ringkasan';state.page='kegiatanDetail';render();}
 function selesaikanKegiatan(id){const kg=DB.kegiatan.find(k=>k.id===id);if(!kg){toast('Tidak ditemukan','error');return;}if(kg.selesai){toast('Sudah selesai','error');return;}const s=saldoKegiatan(id);if(s!==0){toast('Saldo harus Rp 0 (sekarang '+rp(s)+')','error');return;}if(!confirm(`Selesaikan kegiatan "${kg.nama}"?`))return;kg.selesai=true;kg.selesaiAt=todayStr();saveDB();toast('✓ Kegiatan diselesaikan','ok');render();}
-
 function pageKegiatanDetail(){
   const kg=DB.kegiatan.find(k=>k.id===state.kegiatanId);
   if(!kg)return '<div class="card">Kegiatan tidak ditemukan.</div>';
@@ -1299,7 +1478,7 @@ function pageKegiatanDetail(){
   const s=saldoKegiatan(kg.id);
   const headerHtml=`<div class="card"><h3>📚 ${esc(kg.nama)} ${isS?'<span class="badge selesai">Selesai '+fmtTgl(kg.selesaiAt)+'</span>':''}<span class="h3-actions no-print"><button class="btn sm ghost" onclick="go('kegiatan')">← Kembali</button>${!isS?`<button class="btn sm primary" onclick="formTambahKegiatan('${kg.id}')">✎ Edit Info</button><button class="btn sm success" onclick="selesaikanKegiatan('${kg.id}')" ${s===0?'':'disabled'} title="${s===0?'Selesaikan':'Saldo harus 0'}">✓ Selesaikan</button>`:''}</span></h3>
   <div style="font-size:12.5px;color:#64748b;margin-bottom:10px">${fmtTgl(kg.tanggal)} &middot; Kelas: <strong>${esc(klbl)}</strong> &middot; Biaya/Siswa: <strong>${rp(kg.biayaPerSiswa||0)}</strong>${kg.target?` &middot; Target: <strong>${rp(kg.target)}</strong>`:''}${kg.keterangan?`<br>${esc(kg.keterangan)}`:''}</div>
-  <div class="cards" style="margin-bottom:0"><div class="stat green"><span>Bayar Siswa</span><strong>${rp(kegiatanPemasukanSiswa(kg.id))}</strong></div><div class="stat"><span>Pemasukan Lain</span><strong>${rp(kegiatanTransMasuk(kg.id))}</strong></div><div class="stat red"><span>Pengeluaran</span><strong>${rp(kegiatanTransKeluar(kg.id))}</strong></div><div class="stat amber"><span>Saldo</span><strong>${rp(s)}</strong></div></div></div>`;
+  <div class="cards compact" style="margin-bottom:0"><div class="stat compact green"><span>Bayar Siswa</span><strong>${rp(kegiatanPemasukanSiswa(kg.id))}</strong></div><div class="stat compact"><span>Pemasukan Lain</span><strong>${rp(kegiatanTransMasuk(kg.id))}</strong></div><div class="stat compact red"><span>Pengeluaran</span><strong>${rp(kegiatanTransKeluar(kg.id))}</strong></div><div class="stat compact amber"><span>Saldo</span><strong>${rp(s)}</strong></div></div></div>`;
   let c='';
   if(v==='ringkasan')c=viewKegiatanRingkasan(kg);
   else if(v==='transaksi')c=viewKegiatanTransaksi(kg);
@@ -1309,19 +1488,31 @@ function pageKegiatanDetail(){
   return headerHtml+tabsHtml+c;
 }
 function viewKegiatanRingkasan(kg){
-  const ml=DB.kegiatanTrans.filter(t=>t.kegiatanId===kg.id&&t.jenis==='masuk').sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);
-  const kl=DB.kegiatanTrans.filter(t=>t.kegiatanId===kg.id&&t.jenis==='keluar').sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);
-  const bs=DB.kegiatanPembayaran.filter(p=>p.kegiatanId===kg.id).sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);
-  const last=[];
-  ml.forEach(t=>last.push({t:t.tanggal,j:'ml',k:t.keterangan||'Pemasukan',v:t.jumlah}));
-  kl.forEach(t=>last.push({t:t.tanggal,j:'kl',k:t.keterangan||'Pengeluaran',v:t.jumlah}));
-  bs.forEach(p=>{const s=DB.siswa.find(x=>x.id===p.siswaId);last.push({t:p.tanggal,j:'b',k:'Bayar: '+(s?s.nama:'-'),v:p.jumlah});});
-  last.sort((a,b)=>(a.t||'')<(b.t||'')?1:-1);
-  const rows=last.slice(0,30).map((x,i)=>{const jl=x.j==='kl'?'<span class="badge no">Keluar</span>':(x.j==='b'?'<span class="badge info">Bayar Siswa</span>':'<span class="badge ok">Masuk</span>');const c=x.j==='kl'?'keluar':'masuk';return `<tr><td class="c">${i+1}</td><td>${fmtTgl(x.t)}</td><td>${jl}</td><td>${esc(x.k)}</td><td class="r ${c}">${rp(x.v)}</td></tr>`;}).join('');
-  return `<div class="card"><h3>📜 Aktivitas Terbaru</h3>${rows?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tanggal</th><th>Jenis</th><th>Keterangan</th><th class="r">Jumlah</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada aktivitas.</div>`}</div>`;
+  // Laporan arus kas format (gaya gambar)
+  const items=[];
+  DB.kegiatanPembayaran.filter(p=>p.kegiatanId===kg.id).forEach(p=>{
+    const s=DB.siswa.find(x=>x.id===p.siswaId);
+    items.push({tgl:p.tanggal,kategori:'Pembayaran Siswa',keterangan:`${s?s.nama:''} ${s?'('+s.tingkat+')':''}${p.keterangan?' - '+p.keterangan:''}`,masuk:Number(p.jumlah)||0,keluar:0});
+  });
+  DB.kegiatanTrans.filter(t=>t.kegiatanId===kg.id).forEach(t=>{
+    items.push({tgl:t.tanggal,kategori:t.jenis==='masuk'?'Pemasukan Lain':'Pengeluaran',keterangan:t.keterangan||'',masuk:t.jenis==='masuk'?Number(t.jumlah):0,keluar:t.jenis==='keluar'?Number(t.jumlah):0});
+  });
+  items.sort((a,b)=>(a.tgl||'')<(b.tgl||'')?-1:1);
+  return `<div class="card"><h3>📋 Laporan Arus Kas Kegiatan <span class="h3-actions no-print"><button class="btn sm" onclick="cetakLaporanArusKasKegiatan('${kg.id}')">🖨 Cetak Laporan</button></span></h3>${renderTabelArusKas(items)}</div>`;
 }
-
-/* Kegiatan Transaksi — dengan Edit button */
+function cetakLaporanArusKasKegiatan(kgId){
+  const kg=DB.kegiatan.find(k=>k.id===kgId);if(!kg)return;
+  const items=[];
+  DB.kegiatanPembayaran.filter(p=>p.kegiatanId===kgId).forEach(p=>{
+    const s=DB.siswa.find(x=>x.id===p.siswaId);
+    items.push({tgl:p.tanggal,kategori:'Pembayaran Siswa',keterangan:`${s?s.nama:''} ${s?'('+s.tingkat+')':''}${p.keterangan?' - '+p.keterangan:''}`,masuk:Number(p.jumlah)||0,keluar:0});
+  });
+  DB.kegiatanTrans.filter(t=>t.kegiatanId===kgId).forEach(t=>{
+    items.push({tgl:t.tanggal,kategori:t.jenis==='masuk'?'Pemasukan Lain':'Pengeluaran',keterangan:t.keterangan||'',masuk:t.jenis==='masuk'?Number(t.jumlah):0,keluar:t.jenis==='keluar'?Number(t.jumlah):0});
+  });
+  items.sort((a,b)=>(a.tgl||'')<(b.tgl||'')?-1:1);
+  cetakLaporanArusKasPDF('Laporan Arus Kas Kegiatan', 'Kegiatan: '+kg.nama+' — '+fmtTgl(kg.tanggal), items, kg.unit, {tanggal:todayStr()});
+}
 function viewKegiatanTransaksi(kg){
   const isS=!!kg.selesai;
   const m=DB.kegiatanTrans.filter(t=>t.kegiatanId===kg.id&&t.jenis==='masuk').sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);
@@ -1337,8 +1528,6 @@ function viewKegiatanTransaksi(kg){
 function formKegiatanTransModal(){const kg=DB.kegiatan.find(k=>k.id===state.kegiatanId);if(!kg)return;if(kg.selesai){toast('Kegiatan selesai','error');return;}showModal('Input Pemasukan / Pengeluaran — '+kg.nama,`<div class="form-grid"><div class="form-row"><label>Tanggal</label><input type="date" id="kgtTanggal" value="${todayStr()}" required></div><div class="form-row"><label>Jenis</label><select id="kgtJenis"><option value="masuk">Pemasukan</option><option value="keluar">Pengeluaran</option></select></div></div><div class="form-row"><label>Jumlah (Rp)</label><input type="number" id="kgtJumlah" min="0" required></div><div class="form-row"><label>Keterangan</label><input id="kgtKet"></div><div class="form-actions"><button class="btn primary" onclick="simpanKegiatanTrans()">💾 Simpan</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>`);setTimeout(()=>{const e=document.getElementById('kgtJumlah');if(e)e.focus();},20);}
 function simpanKegiatanTrans(){const kg=DB.kegiatan.find(k=>k.id===state.kegiatanId);if(!kg)return;if(kg.selesai){toast('Selesai','error');return;}const j=document.getElementById('kgtJenis').value;const jml=Number(document.getElementById('kgtJumlah').value)||0;if(jml<=0){toast('Jumlah tidak valid','error');return;}DB.kegiatanTrans.push({id:uid(),kegiatanId:kg.id,unit:kg.unit,tanggal:document.getElementById('kgtTanggal').value||todayStr(),jenis:j,jumlah:jml,keterangan:document.getElementById('kgtKet').value.trim(),refId:''});saveDB();closeModal();toast('Disimpan','ok');render();}
 function hapusKegiatanTrans(id){const t=DB.kegiatanTrans.find(x=>x.id===id);if(!t)return;const kg=DB.kegiatan.find(k=>k.id===t.kegiatanId);if(kg&&kg.selesai){toast('Kegiatan selesai','error');return;}if(t.refId){toast('Transaksi terkunci. Hapus dari tab Dana Sekolah.','error');return;}if(!confirm('Hapus?'))return;DB.kegiatanTrans=DB.kegiatanTrans.filter(x=>x.id!==id);saveDB();toast('Dihapus','ok');render();}
-
-/* BARU: Edit Kegiatan Transaksi */
 function formEditKegiatanTrans(id){
   const t=DB.kegiatanTrans.find(x=>x.id===id);if(!t)return;
   const kg=DB.kegiatan.find(k=>k.id===t.kegiatanId);
@@ -1371,19 +1560,13 @@ function simpanEditKegiatanTrans(id){
     if(tr){
       tr.tanggal=tgl;
       const newTh=tahunDariTanggal(kg.unit,tgl);
-      tr.tahun=newTh;
-      tr.jumlah=jml;
+      tr.tahun=newTh;tr.jumlah=jml;
       if(ket)tr.keterangan=ket;
-      if(!(DB.years[kg.unit]||[]).some(y=>y.tahun===newTh)){
-        DB.years[kg.unit]=DB.years[kg.unit]||[];
-        DB.years[kg.unit].push({id:uid(),tahun:newTh,saldoAwal:0,aktif:false});
-      }
+      if(!(DB.years[kg.unit]||[]).some(y=>y.tahun===newTh)){DB.years[kg.unit]=DB.years[kg.unit]||[];DB.years[kg.unit].push({id:uid(),tahun:newTh,saldoAwal:0,aktif:false});}
     }
   }
   saveDB();closeModal();toast('Diperbarui','ok');render();
 }
-
-/* Kegiatan Pembayaran — dengan Edit button */
 function viewKegiatanPembayaran(kg){
   const isS=!!kg.selesai;
   const ap=DB.kegiatanPembayaran.filter(p=>p.kegiatanId===kg.id).sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?1:-1);
@@ -1404,8 +1587,6 @@ function formKegiatanPembayaranModal(psid){
 function updateSiswaOptionsKgp(){const u=state.ctxUnit;const kg=DB.kegiatan.find(k=>k.id===state.kegiatanId);if(!kg)return;const kl=kegiatanKelasList(kg);const k=document.getElementById('kgpKelas').value;const sel=document.getElementById('kgpSiswa');if(!k||!kl.includes(k)){sel.disabled=true;sel.innerHTML='<option value="">-- Pilih Kelas Dulu --</option>';return;}const l=DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif'&&s.tingkat===k).sort((a,b)=>a.nama.localeCompare(b.nama));sel.disabled=false;sel.innerHTML='<option value="">-- Pilih Siswa --</option>'+l.map(s=>`<option value="${s.id}">${esc(s.nis)} — ${esc(s.nama)}</option>`).join('');}
 function simpanKegiatanPembayaran(){const kg=DB.kegiatan.find(k=>k.id===state.kegiatanId);if(!kg)return;if(kg.selesai){toast('Selesai','error');return;}const sid=document.getElementById('kgpSiswa').value;const tgl=document.getElementById('kgpTanggal').value||todayStr();const jml=Number(document.getElementById('kgpJumlah').value)||0;const ket=document.getElementById('kgpKet').value.trim();if(!sid){toast('Pilih siswa','error');return;}if(jml<=0){toast('Jumlah tidak valid','error');return;}DB.kegiatanPembayaran.push({id:uid(),kegiatanId:kg.id,unit:kg.unit,siswaId:sid,jumlah:jml,tanggal:tgl,keterangan:ket});saveDB();closeModal();toast('Disimpan','ok');render();}
 function hapusKegiatanPembayaran(id){const p=DB.kegiatanPembayaran.find(x=>x.id===id);const kg=p?DB.kegiatan.find(k=>k.id===p.kegiatanId):null;if(kg&&kg.selesai){toast('Selesai','error');return;}if(!confirm('Hapus pembayaran ini?'))return;DB.kegiatanPembayaran=DB.kegiatanPembayaran.filter(x=>x.id!==id);saveDB();toast('Dihapus','ok');render();}
-
-/* BARU: Edit Pembayaran Kegiatan */
 function formEditKegiatanPembayaran(id){
   const p=DB.kegiatanPembayaran.find(x=>x.id===id);if(!p)return;
   const kg=DB.kegiatan.find(k=>k.id===p.kegiatanId);
@@ -1429,7 +1610,6 @@ function simpanEditKegiatanPembayaran(id){
   p.tanggal=tgl;p.jumlah=jml;p.keterangan=ket;
   saveDB();closeModal();toast('Diperbarui','ok');render();
 }
-
 function viewKegiatanRekap(kg){
   const u=state.ctxUnit;const kl=kegiatanKelasList(kg);const fk=FILTER.kgRekapKelas||'';
   let l=DB.siswa.filter(s=>s.unit===u&&kl.includes(s.tingkat));
@@ -1442,7 +1622,6 @@ function viewKegiatanRekap(kg){
 }
 function expKegiatanRekap(kid){const kg=DB.kegiatan.find(k=>k.id===kid);if(!kg)return;const u=state.ctxUnit,kl=kegiatanKelasList(kg),fk=FILTER.kgRekapKelas||'';let l=DB.siswa.filter(s=>s.unit===u&&kl.includes(s.tingkat));if(fk&&kl.includes(fk))l=l.filter(s=>s.tingkat===fk);l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));const bi=Number(kg.biayaPerSiswa)||0;const rows=l.map((s,i)=>{const b=totalBayarKegiatanSiswa(kg.id,s.id);const tg=Math.max(0,bi-b);return [i+1,s.nis,s.nama,s.tingkat,bi,b,tg,bi>0&&b>=bi?'Lunas':(b>0?'Kurang':'Belum')];});exportExcel('rekap_kegiatan_'+(kg.nama||'').replace(/\s+/g,'_'),['No','NIS','Nama','Tingkat','Tagihan','Dibayar','Tunggakan','Status'],rows);}
 function cetakKegiatanRekap(kid){const kg=DB.kegiatan.find(k=>k.id===kid);if(!kg)return;const u=state.ctxUnit,kl=kegiatanKelasList(kg),fk=FILTER.kgRekapKelas||'';let l=DB.siswa.filter(s=>s.unit===u&&kl.includes(s.tingkat));if(fk&&kl.includes(fk))l=l.filter(s=>s.tingkat===fk);l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));const bi=Number(kg.biayaPerSiswa)||0;const rows=l.map((s,i)=>{const b=totalBayarKegiatanSiswa(kg.id,s.id);const tg=Math.max(0,bi-b);return [i+1,s.nis,s.nama,s.tingkat,rp(bi),rp(b),rp(tg)];});const tt=l.length*bi;const tb=l.reduce((a,s)=>a+totalBayarKegiatanSiswa(kg.id,s.id),0);cetakPDF('REKAP PEMBAYARAN KEGIATAN: '+kg.nama,'Tanggal: '+fmtTgl(kg.tanggal),['No','NIS','Nama','Tingkat','Tagihan','Dibayar','Tunggakan'],rows,['','TOTAL','','',rp(tt),rp(tb),rp(tt-tb)],null,{tanggal:todayStr()});}
-
 function viewKegiatanDana(kg){
   const u=state.ctxUnit;const isS=!!kg.selesai;
   const rd=DB.kegiatanTrans.filter(t=>t.kegiatanId===kg.id&&t.refId).sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?1:-1);
@@ -1456,7 +1635,7 @@ function formDanaKegiatan(j){
   const u=kg.unit;const sk=saldoKegiatan(kg.id);const sks=saldoUnit(u,tahunAktif(u));
   const judul=j==='minta'?'Pengajuan Dana ke Sekolah':'Setor Dana ke Sekolah';
   const kl=labelKasUnit(u);const dk=j==='minta'?'Ambil dari '+kl+' untuk '+kg.nama:'Setor ke '+kl+' dari '+kg.nama;
-  showModal(judul,`<div class="cards" style="margin-bottom:14px"><div class="stat"><span>Saldo Kegiatan</span><strong>${rp(sk)}</strong></div><div class="stat amber"><span>Saldo ${esc(kl)}</span><strong>${rp(sks)}</strong></div></div><div class="info-box">${j==='minta'?'📥 Saldo kas sekolah berkurang, saldo kegiatan bertambah.':'📤 Saldo kas sekolah bertambah, saldo kegiatan berkurang.'}<br>Transaksi terkunci di menu Transaksi.</div><div class="form-row"><label>Jumlah (Rp)</label><input type="number" id="kdJumlah" min="0" value=""></div><div class="form-row"><label>Tanggal</label><input type="date" id="kdTanggal" value="${todayStr()}"></div><div class="form-row"><label>Keterangan</label><input id="kdKet" placeholder="${esc(dk)}"></div><div class="form-actions"><button class="btn primary" onclick="kirimDanaKegiatan('${j}')">✓ Proses</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>`);
+  showModal(judul,`<div class="cards compact" style="margin-bottom:14px"><div class="stat compact"><span>Saldo Kegiatan</span><strong>${rp(sk)}</strong></div><div class="stat compact amber"><span>Saldo ${esc(kl)}</span><strong>${rp(sks)}</strong></div></div><div class="info-box">${j==='minta'?'📥 Saldo kas sekolah berkurang, saldo kegiatan bertambah.':'📤 Saldo kas sekolah bertambah, saldo kegiatan berkurang.'}<br>Transaksi terkunci di menu Transaksi.</div><div class="form-row"><label>Jumlah (Rp)</label><input type="number" id="kdJumlah" min="0" value=""></div><div class="form-row"><label>Tanggal</label><input type="date" id="kdTanggal" value="${todayStr()}"></div><div class="form-row"><label>Keterangan</label><input id="kdKet" placeholder="${esc(dk)}"></div><div class="form-actions"><button class="btn primary" onclick="kirimDanaKegiatan('${j}')">✓ Proses</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>`);
 }
 function kirimDanaKegiatan(j){
   const kg=DB.kegiatan.find(k=>k.id===state.kegiatanId);if(!kg)return;if(kg.selesai){toast('Selesai','error');return;}
@@ -1492,7 +1671,7 @@ function pageEvent(){
   }).join('');
   return `<div class="card no-print"><h3>🎉 Program Donasi<span class="h3-actions"><button class="btn sm primary" onclick="formBuatProgram()">➕ Buat Program Donasi</button></span></h3>
   <div class="filters"><div><label>Status</label><select onchange="setFilter('evStatus',this.value)"><option value="aktif" ${fs==='aktif'?'selected':''}>Aktif</option><option value="selesai" ${fs==='selesai'?'selected':''}>Selesai</option><option value="semua" ${fs==='semua'?'selected':''}>Semua</option></select></div></div>
-  <div class="info-box">ℹ️ Tombol <strong>✓</strong> aktif saat saldo = Rp 0. Bendahara program (opsional) dibuat di halaman <strong>Kelola</strong>.</div></div>
+  <div class="info-box">ℹ️ Tombol <strong>✓</strong> aktif saat saldo = Rp 0. Bendahara program (opsional) dikelola di halaman <strong>Kelola</strong>.</div></div>
   <div class="card"><h3>Daftar Program (${l.length})</h3>${l.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th class="c no-print">Kelola</th><th>Nama Program</th><th>Tanggal</th><th class="r">Pemasukan</th><th class="r">Pengeluaran</th><th class="r">Saldo</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada program.</div>`}</div>`;
 }
 function formBuatProgram(editId){
@@ -1536,6 +1715,57 @@ function pageProgramSaya(){
   state.eventId=evId;
   return pageEventDetail();
 }
+/* HALAMAN BARU: Kelola Bendahara Program */
+function pageBendaharaProgram(){
+  const evId = state.bendaharaEventId || state.eventId;
+  const ev = DB.events.find(e=>e.id===evId);
+  if(!ev) return '<div class="card"><div class="empty">Program tidak ditemukan.</div></div>';
+  const isS = !!ev.selesai;
+  const bu = userProgramBendahara(ev.id);
+  const buRows = bu.map(([un,i])=>{
+    const pc = showPasswords
+      ? `<span class="badge info" style="font-family:monospace;text-transform:none">${esc(i.pass)}</span>`
+      : `<span class="badge info">••••••</span>`;
+    return `<tr>
+      <td><strong>${esc(un)}</strong></td>
+      <td>${esc(i.nama)}</td>
+      <td class="c">${pc}</td>
+      <td class="c no-print">
+        <button class="btn xs accent" onclick="resetPasswordModal('${esc(un)}')">🔑 Reset</button>
+        <button class="btn xs danger" onclick="hapusUserBendahara('${esc(un)}')">Hapus</button>
+      </td>
+    </tr>`;
+  }).join('');
+  return `<div class="card">
+    <h3>👤 Bendahara Program — ${esc(ev.nama)}
+      <span class="h3-actions no-print">
+        <button class="btn sm ghost" onclick="kembaliKeEvent()">← Kembali ke Program</button>
+        <button class="btn sm ghost" onclick="togglePasswordView()">${showPasswords?'🙈 Sembunyikan':'👁 Tampilkan'} Password</button>
+        ${!isS?`<button class="btn sm primary" onclick="formTambahBendaharaProgram('${ev.id}')">➕ Tambah Bendahara</button>`:''}
+      </span>
+    </h3>
+    <div class="info-box">
+      ℹ️ Bendahara program dapat login dan mengelola program ini (input pemasukan/pengeluaran).
+      Mereka tidak bisa mengubah info program atau mentransfer dana ke kas unit/yayasan.
+      Role khusus: <strong>Bendahara Program</strong>.
+    </div>
+    ${bu.length
+      ? `<div class="tbl-wrap"><table class="tbl"><thead><tr>
+          <th>Username</th><th>Nama</th><th class="c">Password</th><th class="c no-print">Aksi</th>
+        </tr></thead><tbody>${buRows}</tbody></table></div>`
+      : `<div class="empty" style="padding:20px">Belum ada bendahara program.</div>`}
+    ${!isS?`<div class="form-actions" style="margin-top:14px">
+      <button class="btn primary" onclick="formTambahBendaharaProgram('${ev.id}')">➕ Tambah Bendahara Program</button>
+    </div>`:''}
+  </div>`;
+}
+function kembaliKeEvent(){
+  const evId = state.bendaharaEventId || state.eventId;
+  state.eventId = evId;
+  state.bendaharaEventId = null;
+  state.page = 'eventDetail';
+  render();
+}
 function pageEventDetail(){
   const u=state.ctxUnit;const ev=DB.events.find(e=>e.id===state.eventId);
   if(!ev)return '<div class="card">Program tidak ditemukan.</div>';
@@ -1546,34 +1776,57 @@ function pageEventDetail(){
   const s=m-k;const t=Number(ev.target)||0;const ps=t>0?Math.min(100,Math.round(m/t*100)):0;
   const rows=trs.map((t,i)=>{
     const lk=!!t.refId;
-    return `<tr><td class="c">${i+1}</td><td>${fmtTgl(t.tanggal)}</td><td><span class="badge ${t.jenis==='masuk'?'ok':'no'}">${t.jenis==='masuk'?'Masuk':'Keluar'}</span></td><td>${esc(t.keterangan||'-')}</td><td class="r ${t.jenis==='masuk'?'masuk':'keluar'}">${rp(t.jumlah)}</td><td class="c no-print">${!isS?`<button class="btn xs" onclick="formEditEventTrans('${t.id}')">Edit</button>${lk?'<span class="lock-badge">🔒</span>':`<button class="btn xs danger" onclick="hapusEventTrans('${t.id}')">Hapus</button>`}`:(lk?'<span class="lock-badge">🔒</span>':'<span class="lock-badge">🔒 Selesai</span>')}</td></tr>`;
+    return `<tr><td class="c">${i+1}</td><td>${fmtTgl(t.tanggal)}</td><td><span class="badge ${t.jenis==='masuk'?'ok':'no'}">${t.jenis==='masuk'?'Masuk':'Keluar'}</span></td><td>${esc(t.keterangan||'-')}</td><td class="r masuk">${t.jenis==='masuk'?rp(t.jumlah):'-'}</td><td class="r keluar">${t.jenis==='keluar'?rp(t.jumlah):'-'}</td><td class="c no-print">${!isS?`<button class="btn xs" onclick="formEditEventTrans('${t.id}')">Edit</button>${lk?'<span class="lock-badge">🔒</span>':`<button class="btn xs danger" onclick="hapusEventTrans('${t.id}')">Hapus</button>`}`:(lk?'<span class="lock-badge">🔒</span>':'<span class="lock-badge">🔒 Selesai</span>')}</td></tr>`;
   }).join('');
   const bml=labelAmbilKas(u),bsl=labelSetorKas(u),kl=labelKasUnit(u),sks=saldoUnit(u,tahunAktif(u));
-  const bHtml=(ev.bendahara||ev.bendaharaUsername)?`<div style="margin-top:6px">Bendahara: <strong>${esc(ev.bendahara||'-')}</strong>${ev.bendaharaUsername?` <small style="color:#94a3b8">(@${esc(ev.bendaharaUsername)})</small>`:''}</div>`:'';
-  const bu=userProgramBendahara(ev.id);
-  const buRows=bu.map(([un,i])=>{const pc=showPasswords?`<span class="badge info" style="font-family:monospace;text-transform:none">${esc(i.pass)}</span>`:`<span class="badge info">••••••</span>`;return `<tr><td><strong>${esc(un)}</strong></td><td>${esc(i.nama)}</td><td class="c">${pc}</td><td class="c no-print"><button class="btn xs accent" onclick="resetPasswordModal('${esc(un)}')">🔑 Reset</button><button class="btn xs danger" onclick="hapusUserBendahara('${esc(un)}')">Hapus</button></td></tr>`;}).join('');
+  const bHtml=(ev.bendahara||ev.bendaharaUsername)?`<div style="margin-top:4px">Bendahara: <strong>${esc(ev.bendahara||'-')}</strong>${ev.bendaharaUsername?` <small style="color:#94a3b8">(@${esc(ev.bendaharaUsername)})</small>`:''}</div>`:'';
+  const buCount = userProgramBendahara(ev.id).length;
+  // Items laporan arus kas
+  const itemsKas = trs.map(t=>({tgl:t.tanggal,kategori:t.jenis==='masuk'?'Pemasukan':'Pengeluaran',keterangan:t.keterangan||'',masuk:t.jenis==='masuk'?Number(t.jumlah):0,keluar:t.jenis==='keluar'?Number(t.jumlah):0}));
   
   if(isB){
     return `<div class="card"><h3>🎉 ${esc(ev.nama)} ${isS?'<span class="badge selesai">Selesai '+fmtTgl(ev.selesaiAt)+'</span>':''}</h3>
     <div style="font-size:12.5px;color:#64748b;margin-bottom:14px">${fmtTgl(ev.tanggal)} | ${esc(ev.keterangan||'')}${t>0?`<br>Target: <strong>${rp(t)}</strong> — ${ps}%`:''}</div>
     ${t>0?`<div class="bar" style="height:10px;margin-bottom:14px"><i style="width:${ps}%"></i></div>`:''}
-    <div class="cards" style="margin-bottom:0"><div class="stat green"><span>Pemasukan</span><strong>${rp(m)}</strong></div><div class="stat red"><span>Pengeluaran</span><strong>${rp(k)}</strong></div><div class="stat"><span>Saldo</span><strong>${rp(s)}</strong></div></div></div>
-    ${!isS?`<div class="card no-print"><h3>➕ Input Transaksi<span class="h3-actions"><button class="btn sm primary" onclick="formBuatDonasiProgram('${ev.id}')">➕ Input Pemasukan/Pengeluaran</button></span></h3><div class="hint">Catat pemasukan/pengeluaran program.</div></div>`:''}
-    <div class="card"><h3>Riwayat Transaksi<span class="h3-actions no-print"><button class="btn sm" onclick="expEventTrans()">⬇ Excel</button><button class="btn sm" onclick="cetakEventTrans()">🖨 Cetak</button></span></h3>
-    ${trs.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Jenis</th><th>Keterangan</th><th class="r">Jumlah</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}<tr class="tot-row"><td class="c"></td><td colspan="2">TOTAL MASUK</td><td></td><td class="r masuk">${rp(m)}</td><td class="no-print"></td></tr><tr class="tot-row"><td class="c"></td><td colspan="2">TOTAL KELUAR</td><td></td><td class="r keluar">${rp(k)}</td><td class="no-print"></td></tr><tr class="tot-row"><td class="c"></td><td colspan="2">SALDO</td><td></td><td class="r">${rp(s)}</td><td class="no-print"></td></tr></tbody></table></div>`:`<div class="empty">Belum ada.</div>`}</div>`;
+    <div class="cards compact" style="margin-bottom:0"><div class="stat compact green"><span>Pemasukan</span><strong>${rp(m)}</strong></div><div class="stat compact red"><span>Pengeluaran</span><strong>${rp(k)}</strong></div><div class="stat compact"><span>Saldo</span><strong>${rp(s)}</strong></div></div></div>
+    ${!isS?`<div class="btn-row no-print"><button class="btn sm primary" onclick="formBuatDonasiProgram('${ev.id}')">➕ Input Pemasukan/Pengeluaran</button></div>`:''}
+    <div class="card"><h3>📋 Laporan Arus Kas</h3><span class="h3-actions no-print"><button class="btn sm" onclick="cetakLaporanArusKasEvent('${ev.id}')">🖨 Cetak</button></span>${renderTabelArusKas(itemsKas)}</div>`;
   }
   return `<div class="card"><h3>🎉 ${esc(ev.nama)} ${isS?'<span class="badge selesai">Selesai '+fmtTgl(ev.selesaiAt)+'</span>':''}<span class="h3-actions no-print"><button class="btn sm ghost" onclick="go('event')">← Kembali</button>${!isS?`<button class="btn sm primary" onclick="formBuatProgram('${ev.id}')">✎ Edit Info</button><button class="btn sm success" onclick="selesaikanProgram('${ev.id}')" ${s===0?'':'disabled'} title="${s===0?'Selesaikan':'Saldo harus 0'}">✓ Selesaikan</button>`:''}</span></h3>
-  <div style="font-size:12.5px;color:#64748b;margin-bottom:14px">${fmtTgl(ev.tanggal)} | ${esc(ev.keterangan||'')}${t>0?`<br>Target: <strong>${rp(t)}</strong> — ${ps}%`:''}${bHtml}</div>
-  ${t>0?`<div class="bar" style="height:10px;margin-bottom:14px"><i style="width:${ps}%"></i></div>`:''}
-  <div class="cards" style="margin-bottom:0"><div class="stat green"><span>Pemasukan</span><strong>${rp(m)}</strong></div><div class="stat red"><span>Pengeluaran</span><strong>${rp(k)}</strong></div><div class="stat"><span>Saldo</span><strong>${rp(s)}</strong></div><div class="stat amber"><span>${esc(kl)}</span><strong>${rp(sks)}</strong></div></div></div>
-  ${!isS?`<div class="card no-print"><h3>➕ Input Transaksi Program<span class="h3-actions"><button class="btn sm primary" onclick="formBuatDonasiProgram('${ev.id}')">➕ Input Pemasukan/Pengeluaran</button></span></h3><div class="hint">Catat pemasukan/pengeluaran program.</div></div>`:''}
-  ${!isS?`<div class="card"><h3>🔄 Dana Program &amp; ${esc(kl)}</h3><div class="info-box" style="background:#fef3c7;border-left-color:#f59e0b">⚡ Transfer langsung mengubah saldo ${esc(kl)} dan tercatat di menu Transaksi.</div><div class="form-actions no-print"><button class="btn accent" onclick="formDanaEvent('minta')">📥 ${esc(bml)}</button><button class="btn success" onclick="formDanaEvent('setor')">📤 ${esc(bsl)}</button></div></div>`:''}
-  ${!isS?`<div class="card no-print"><h3>👤 Bendahara Program <small style="color:#94a3b8;font-weight:400">(opsional)</small></h3><div class="hint" style="margin-bottom:12px">Bendahara program dapat login dan mengelola program ini (input transaksi saja).</div>${bu.length?`<div class="tbl-wrap" style="margin-bottom:12px"><table class="tbl"><thead><tr><th>Username</th><th>Nama</th><th class="c">Password</th><th class="c no-print">Aksi</th></tr></thead><tbody>${buRows}</tbody></table></div>`:`<div class="empty" style="padding:16px">Belum ada bendahara program.</div>`}<div class="form-actions"><button class="btn sm primary" onclick="formTambahBendaharaProgram('${ev.id}')">➕ Tambah Bendahara Program</button></div></div>`:''}
-  <div class="card"><h3>Riwayat Transaksi<span class="h3-actions no-print"><button class="btn sm" onclick="expEventTrans()">⬇ Excel</button><button class="btn sm" onclick="cetakEventTrans()">🖨 Cetak</button></span></h3>
-  ${trs.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Jenis</th><th>Keterangan</th><th class="r">Jumlah</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}<tr class="tot-row"><td class="c"></td><td colspan="2">TOTAL MASUK</td><td></td><td class="r masuk">${rp(m)}</td><td class="no-print"></td></tr><tr class="tot-row"><td class="c"></td><td colspan="2">TOTAL KELUAR</td><td></td><td class="r keluar">${rp(k)}</td><td class="no-print"></td></tr><tr class="tot-row"><td class="c"></td><td colspan="2">SALDO</td><td></td><td class="r">${rp(s)}</td><td class="no-print"></td></tr></tbody></table></div>`:`<div class="empty">Belum ada.</div>`}</div>`;
+  <div style="font-size:12.5px;color:#64748b;margin-bottom:10px">${fmtTgl(ev.tanggal)} | ${esc(ev.keterangan||'')}${t>0?`<br>Target: <strong>${rp(t)}</strong> — ${ps}%`:''}${bHtml}</div>
+  ${t>0?`<div class="bar" style="height:8px;margin-bottom:12px"><i style="width:${ps}%"></i></div>`:''}
+  <div class="cards compact" style="margin-bottom:0">
+    <div class="stat compact green"><span>Pemasukan</span><strong>${rp(m)}</strong></div>
+    <div class="stat compact red"><span>Pengeluaran</span><strong>${rp(k)}</strong></div>
+    <div class="stat compact"><span>Saldo</span><strong>${rp(s)}</strong></div>
+    <div class="stat compact amber"><span>${esc(kl)}</span><strong>${rp(sks)}</strong></div>
+  </div></div>
+  ${!isS?`<div class="btn-row no-print" style="margin-top:0">
+    <button class="btn sm primary" onclick="formBuatDonasiProgram('${ev.id}')">➕ Input Pemasukan/Pengeluaran</button>
+    <button class="btn sm accent" onclick="formDanaEvent('minta')">📥 ${esc(bml)}</button>
+    <button class="btn sm success" onclick="formDanaEvent('setor')">📤 ${esc(bsl)}</button>
+  </div>`:''}
+  <div class="card"><h3>👤 Bendahara Program <small style="color:#94a3b8;font-weight:400">(opsional)</small></h3>
+    <div style="font-size:12.5px;color:#64748b;margin-bottom:10px">${buCount} akun bendahara program terdaftar.</div>
+    <button class="btn-link no-print" onclick="bukaKelolaBendahara('${ev.id}')">👥 Kelola Bendahara Program →</button>
+  </div>
+  <div class="card"><h3>📋 Laporan Arus Kas<span class="h3-actions no-print"><button class="btn sm" onclick="cetakLaporanArusKasEvent('${ev.id}')">🖨 Cetak Laporan</button></span></h3>${renderTabelArusKas(itemsKas)}</div>
+  <div class="card no-print"><h3>Daftar Transaksi</h3>${trs.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Jenis</th><th>Keterangan</th><th class="r">Masuk</th><th class="r">Keluar</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada.</div>`}</div>`;
+}
+function bukaKelolaBendahara(evId){
+  state.bendaharaEventId = evId;
+  state.eventId = evId;
+  state.page = 'bendaharaProgram';
+  render();
+}
+function cetakLaporanArusKasEvent(evId){
+  const ev = DB.events.find(e=>e.id===evId); if(!ev) return;
+  const trs = DB.eventTrans.filter(t=>t.eventId===evId).sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);
+  const items = trs.map(t=>({tgl:t.tanggal,kategori:t.jenis==='masuk'?'Pemasukan':'Pengeluaran',keterangan:t.keterangan||'',masuk:t.jenis==='masuk'?Number(t.jumlah):0,keluar:t.jenis==='keluar'?Number(t.jumlah):0}));
+  cetakLaporanArusKasPDF('Laporan Arus Kas Program Donasi', 'Program: '+ev.nama+' — '+fmtTgl(ev.tanggal), items, ev.unit, {tanggal: ev.selesaiAt||todayStr()});
 }
 
-/* BARU: Edit Event Trans dengan sync ke kas */
+/* Edit event trans - fix: sekarang sync juga untuk non-refId jika transfer */
 function formEditEventTrans(id){
   const t=DB.eventTrans.find(x=>x.id===id);if(!t)return;
   const ev=DB.events.find(e=>e.id===t.eventId);
@@ -1606,18 +1859,13 @@ function simpanEditEventTrans(id){
     if(tr){
       tr.tanggal=tgl;
       const newTh=tahunDariTanggal(ev.unit,tgl);
-      tr.tahun=newTh;
-      tr.jumlah=jml;
+      tr.tahun=newTh;tr.jumlah=jml;
       if(ket)tr.keterangan=ket;
-      if(!(DB.years[ev.unit]||[]).some(y=>y.tahun===newTh)){
-        DB.years[ev.unit]=DB.years[ev.unit]||[];
-        DB.years[ev.unit].push({id:uid(),tahun:newTh,saldoAwal:0,aktif:false});
-      }
+      if(!(DB.years[ev.unit]||[]).some(y=>y.tahun===newTh)){DB.years[ev.unit]=DB.years[ev.unit]||[];DB.years[ev.unit].push({id:uid(),tahun:newTh,saldoAwal:0,aktif:false});}
     }
   }
   saveDB();closeModal();toast('Diperbarui','ok');render();
 }
-
 function formTambahBendaharaProgram(evId){
   const ev=DB.events.find(e=>e.id===evId);if(!ev)return;
   if(ev.selesai){toast('Selesai','error');return;}
@@ -1677,7 +1925,7 @@ function hapusEventTrans(id){
   saveDB();toast('Dihapus','ok');render();
 }
 function expEventTrans(){const ev=DB.events.find(x=>x.id===state.eventId);if(!ev)return;const trs=DB.eventTrans.filter(t=>t.eventId===ev.id);exportExcel('program_'+ev.nama.replace(/\s+/g,'_'),['No','Tanggal','Jenis','Keterangan','Jumlah'],trs.map((t,i)=>[i+1,fmtTgl(t.tanggal),t.jenis==='masuk'?'Masuk':'Keluar',t.keterangan||'',Number(t.jumlah)]));}
-function cetakEventTrans(){const ev=DB.events.find(x=>x.id===state.eventId);if(!ev)return;const trs=DB.eventTrans.filter(t=>t.eventId===ev.id).sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);const m=trs.filter(t=>t.jenis==='masuk').reduce((a,b)=>a+Number(b.jumlah),0);const k=trs.filter(t=>t.jenis==='keluar').reduce((a,b)=>a+Number(b.jumlah),0);cetakPDF('Laporan Program: '+ev.nama,'Tanggal: '+fmtTgl(ev.tanggal),['No','Tanggal','Jenis','Keterangan','Jumlah'],trs.map((t,i)=>[i+1,fmtTgl(t.tanggal),t.jenis==='masuk'?'Masuk':'Keluar',t.keterangan||'',rp(t.jumlah)]),['','SALDO','','',rp(m-k)],ev.unit,{tanggal:ev.tanggal});}
+function cetakEventTrans(){const ev=DB.events.find(x=>x.id===state.eventId);if(!ev)return;cetakLaporanArusKasEvent(ev.id);}
 function formDanaEvent(j){
   const ev=DB.events.find(x=>x.id===state.eventId);if(!ev)return;
   if(ev.selesai){toast('Selesai','error');return;}
@@ -1686,7 +1934,7 @@ function formDanaEvent(j){
   const kl=labelKasUnit(u);const dk=j==='minta'?'Ambil dana program: '+ev.nama:'Setor dana program: '+ev.nama;
   const ic=j==='minta'?'#f59e0b':'#16a34a';
   const it=j==='minta'?`Saldo ${kl} akan <strong>berkurang</strong> dan saldo program <strong>bertambah</strong>.`:`Saldo ${kl} akan <strong>bertambah</strong> dan saldo program <strong>berkurang</strong>.`;
-  showModal(judul,`<div class="cards" style="margin-bottom:14px"><div class="stat"><span>Saldo Program</span><strong>${rp(s)}</strong></div><div class="stat amber"><span>Saldo ${esc(kl)}</span><strong>${rp(sk)}</strong></div></div><div class="info-box" style="background:#fef3c7;border-left-color:${ic}">⚡ ${it}</div><div class="form-row"><label>Jumlah (Rp)</label><input type="number" id="pmeJumlah" min="0" value=""></div><div class="form-row"><label>Tanggal</label><input type="date" id="pmeTanggal" value="${todayStr()}"></div><div class="form-row"><label>Keterangan</label><input id="pmeKet" placeholder="${esc(dk)}"></div><div class="form-actions"><button class="btn primary" onclick="kirimDanaEvent('${j}')">✓ Proses</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>`);
+  showModal(judul,`<div class="cards compact" style="margin-bottom:14px"><div class="stat compact"><span>Saldo Program</span><strong>${rp(s)}</strong></div><div class="stat compact amber"><span>Saldo ${esc(kl)}</span><strong>${rp(sk)}</strong></div></div><div class="info-box" style="background:#fef3c7;border-left-color:${ic}">⚡ ${it}</div><div class="form-row"><label>Jumlah (Rp)</label><input type="number" id="pmeJumlah" min="0" value=""></div><div class="form-row"><label>Tanggal</label><input type="date" id="pmeTanggal" value="${todayStr()}"></div><div class="form-row"><label>Keterangan</label><input id="pmeKet" placeholder="${esc(dk)}"></div><div class="form-actions"><button class="btn primary" onclick="kirimDanaEvent('${j}')">✓ Proses</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>`);
 }
 function kirimDanaEvent(j){
   const ev=DB.events.find(x=>x.id===state.eventId);if(!ev)return;
@@ -1711,7 +1959,7 @@ function kirimDanaEvent(j){
 function pagePermohonan(){
   const u=state.ctxUnit;
   const l=DB.permohonan.filter(p=>p.dari===u).sort((a,b)=>b.createdAt-a.createdAt);
-  const rows=l.map((p,i)=>`<tr><td class="c">${i+1}</td><td>${fmtTgl(p.tanggal)}</td><td>${esc(labelJenisPermohonan(p))}</td><td class="r">${rp(p.jumlah)}</td><td>${esc(p.keterangan||'-')}${p.eventNama?`<br><small style="color:#94a3b8">Program: ${esc(p.eventNama)}</small>`:''}</td><td class="c"><span class="badge ${p.status==='approved'?'ok':(p.status==='rejected'?'no':'pending')}">${p.status==='approved'?'Disetujui':(p.status==='rejected'?'Ditolak':'Menunggu')}</span></td><td class="c no-print">${p.status==='pending'?`<button class="btn xs danger" onclick="batalkanPermohonan('${p.id}')">Batal</button>`:'-'}</td></tr>`).join('');
+  const rows=l.map((p,i)=>`<tr><td class="c">${i+1}</td><td>${fmtTgl(p.tanggal)}</td><td>${esc(labelJenisPermohonan(p))}</td><td class="r">${rp(p.jumlah)}</td><td>${esc(p.keterangan||'-')}</td><td class="c"><span class="badge ${p.status==='approved'?'ok':(p.status==='rejected'?'no':'pending')}">${p.status==='approved'?'Disetujui':(p.status==='rejected'?'Ditolak':'Menunggu')}</span></td><td class="c no-print">${p.status==='pending'?`<button class="btn xs danger" onclick="batalkanPermohonan('${p.id}')">Batal</button>`:'-'}</td></tr>`).join('');
   return `<div class="card no-print"><h3>📤 Permohonan / Setoran Dana<span class="h3-actions"><button class="btn sm primary" onclick="formAjukanPermohonan()">➕ Ajukan Permohonan / Setoran</button></span></h3>
   <div class="hint">Klik tombol di atas untuk mengajukan permohonan/setoran dana ke yayasan.</div></div>
   <div class="card"><h3>Riwayat Pengajuan</h3>${l.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Jenis</th><th class="r">Jumlah</th><th>Keterangan</th><th class="c">Status</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada.</div>`}</div>`;
@@ -1965,7 +2213,7 @@ table.data tr.tot{font-weight:700;background:#f1f5f9}
   w.document.write(doc);w.document.close();
 }
 function expLapKas(){const u=state.ctxUnit,th=FILTER.lapTahun||tahunAktif(u),bl=FILTER.lapBulan||'';let d=DB.transaksi.filter(t=>t.unit===u&&t.tahun===th);if(bl)d=d.filter(t=>(t.tanggal||'').slice(5,7)===bl);d.sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);exportExcel('laporan_kas_'+u,['No','Tanggal','Jenis','Kategori','Keterangan','Jumlah'],d.map((t,i)=>[i+1,fmtTgl(t.tanggal),t.jenis==='masuk'?'Masuk':'Keluar',t.kategori,t.keterangan||'',Number(t.jumlah)]));}
-function cetakLapKas(){const u=state.ctxUnit,th=FILTER.lapTahun||tahunAktif(u),bl=FILTER.lapBulan||'';let d=DB.transaksi.filter(t=>t.unit===u&&t.tahun===th);if(bl)d=d.filter(t=>(t.tanggal||'').slice(5,7)===bl);d.sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);const tm=d.filter(t=>t.jenis==='masuk').reduce((a,b)=>a+Number(b.jumlah),0);const tk=d.filter(t=>t.jenis==='keluar').reduce((a,b)=>a+Number(b.jumlah),0);const pl=bl?`${BULAN[Number(bl)-1]} ${th}`:`Tahun ${th}`;const ta=tanggalAkhirPeriode(u,{th,bl});cetakPDF('LAPORAN ARUS KAS',`Periode: ${pl}`,['No','Tanggal','Kategori','Keterangan','Pemasukan','Pengeluaran'],d.map((t,i)=>[i+1,fmtTgl(t.tanggal),t.kategori,t.keterangan||'-',t.jenis==='masuk'?rp(t.jumlah):'-',t.jenis==='keluar'?rp(t.jumlah):'-']),['','TOTAL','','',rp(tm),rp(tk)],null,{tanggal:ta});}
+function cetakLapKas(){const u=state.ctxUnit,th=FILTER.lapTahun||tahunAktif(u),bl=FILTER.lapBulan||'';let d=DB.transaksi.filter(t=>t.unit===u&&t.tahun===th);if(bl)d=d.filter(t=>(t.tanggal||'').slice(5,7)===bl);d.sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);const pl=bl?`${BULAN[Number(bl)-1]} ${th}`:`Tahun ${th}`;const ta=tanggalAkhirPeriode(u,{th,bl});const items=d.map(t=>({tgl:t.tanggal,kategori:t.kategori,keterangan:t.keterangan,masuk:t.jenis==='masuk'?Number(t.jumlah):0,keluar:t.jenis==='keluar'?Number(t.jumlah):0}));cetakLaporanArusKasPDF('Laporan Arus Kas', 'Periode: '+pl, items, u, {tanggal:ta});}
 function expRekapKas(){const u=state.ctxUnit,th=FILTER.lapTahun||tahunAktif(u),bl=FILTER.lapBulan||'';const rows=[['Saldo Awal '+th,'','','',saldoAwal(u,th)]];let k=saldoAwal(u,th);BULAN.forEach((nb,i)=>{const bl2=String(i+1).padStart(2,'0');if(bl&&bl2!==bl)return;let d=DB.transaksi.filter(t=>t.unit===u&&t.tahun===th&&(t.tanggal||'').slice(5,7)===bl2);const m=d.filter(t=>t.jenis==='masuk').reduce((a,b)=>a+Number(b.jumlah),0);const kk=d.filter(t=>t.jenis==='keluar').reduce((a,b)=>a+Number(b.jumlah),0);k+=m-kk;rows.push([nb,m,kk,m-kk,k]);});const tM=rows.slice(1).reduce((a,r)=>a+Number(r[1]||0),0),tK=rows.slice(1).reduce((a,r)=>a+Number(r[2]||0),0);rows.push(['TOTAL',tM,tK,tM-tK,saldoAwal(u,th)+tM-tK]);exportExcel('rekap_arus_kas_'+u+'_'+th,['Bulan','Pemasukan','Pengeluaran','Selisih','Saldo Kumulatif'],rows);}
 function cetakRekapKas(){const u=state.ctxUnit,th=FILTER.lapTahun||tahunAktif(u),bl=FILTER.lapBulan||'';const lbl=labelTahun(u);const rd=[];rd.push(['','Saldo Awal','-','-','-',rp(saldoAwal(u,th))]);let k=saldoAwal(u,th);BULAN.forEach((nb,i)=>{const bl2=String(i+1).padStart(2,'0');if(bl&&bl2!==bl)return;let d=DB.transaksi.filter(t=>t.unit===u&&t.tahun===th&&(t.tanggal||'').slice(5,7)===bl2);const m=d.filter(t=>t.jenis==='masuk').reduce((a,b)=>a+Number(b.jumlah),0);const kk=d.filter(t=>t.jenis==='keluar').reduce((a,b)=>a+Number(b.jumlah),0);k+=m-kk;rd.push([i+1,nb,rp(m),rp(kk),rp(m-kk),rp(k)]);});const tM=rd.slice(1).reduce((a,r)=>a+Number(String(r[2]).replace(/[^\d]/g,'')||0),0);const tK=rd.slice(1).reduce((a,r)=>a+Number(String(r[3]).replace(/[^\d]/g,'')||0),0);const ta=tanggalAkhirPeriode(u,{th,bl});cetakPDF('LAPORAN REKAPITULASI ARUS KAS',`${lbl}: ${th}${bl?' — Bulan: '+BULAN[Number(bl)-1]:''}`,['No','Bulan','Pemasukan','Pengeluaran','Selisih','Saldo Kumulatif'],rd,['','TOTAL',rp(tM),rp(tK),rp(tM-tK),rp(saldoAwal(u,th)+tM-tK)],null,{tanggal:ta});}
 function expLapKategori(){const u=state.ctxUnit,th=FILTER.lapTahun||tahunAktif(u),bl=FILTER.lapBulan||'';let d=DB.transaksi.filter(t=>t.unit===u&&t.tahun===th);if(bl)d=d.filter(t=>(t.tanggal||'').slice(5,7)===bl);const km={};d.forEach(t=>{km[t.kategori]=km[t.kategori]||{masuk:0,keluar:0};if(t.jenis==='masuk')km[t.kategori].masuk+=Number(t.jumlah);else km[t.kategori].keluar+=Number(t.jumlah);});const ks=Object.keys(km).sort();const rows=ks.map((k,i)=>{const r=km[k];return [i+1,k,r.masuk,r.keluar,r.masuk-r.keluar];});const tM=ks.reduce((a,k)=>a+km[k].masuk,0),tK=ks.reduce((a,k)=>a+km[k].keluar,0);rows.push(['','TOTAL',tM,tK,tM-tK]);const sf=(bl?('_'+bl):'')+'_'+th;exportExcel('rekap_kategori_'+u+sf,['No','Kategori','Total Pemasukan','Total Pengeluaran','Selisih'],rows);}
@@ -1994,7 +2242,7 @@ function pageLaporanKetua(){
   if(du&&UNITS[du]){
     const h=hs.find(x=>x.un===du);const d=h.data.sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);let run=h.sa;
     const dr=d.map((t,i)=>{run+=t.jenis==='masuk'?Number(t.jumlah):-Number(t.jumlah);return `<tr><td class="c">${i+1}</td><td>${fmtTgl(t.tanggal)}</td><td>${esc(t.kategori)}</td><td>${esc(t.keterangan||'-')}</td><td class="r masuk">${t.jenis==='masuk'?rp(t.jumlah):'-'}</td><td class="r keluar">${t.jenis==='keluar'?rp(t.jumlah):'-'}</td><td class="r"><strong>${rp(run)}</strong></td></tr>`;}).join('');
-    h2:;h+=`<div class="card"><h3>Detail — ${esc(UNITS[du].nama)} (${esc(h.thU)})<span class="h3-actions no-print"><button class="btn sm" onclick="setFilter('lkUnit','')">✕ Tutup</button><button class="btn sm" onclick="expDetailUnit('${du}')">⬇ Excel</button><button class="btn sm" onclick="cetakDetailUnit('${du}')">🖨 Cetak</button></span></h3>${d.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Kategori</th><th>Keterangan</th><th class="r">Masuk</th><th class="r">Keluar</th><th class="r">Saldo</th></tr></thead><tbody>${dr}<tr class="tot-row"><td class="c"></td><td colspan="2">TOTAL</td><td></td><td class="r masuk">${rp(h.masuk)}</td><td class="r keluar">${rp(h.keluar)}</td><td class="r">${rp(h.akhir)}</td></tr></tbody></table></div>`:`<div class="empty">Tidak ada transaksi.</div>`}</div>`;
+    h+=`<div class="card"><h3>Detail — ${esc(UNITS[du].nama)} (${esc(h.thU)})<span class="h3-actions no-print"><button class="btn sm" onclick="setFilter('lkUnit','')">✕ Tutup</button><button class="btn sm" onclick="expDetailUnit('${du}')">⬇ Excel</button><button class="btn sm" onclick="cetakDetailUnit('${du}')">🖨 Cetak</button></span></h3>${d.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Kategori</th><th>Keterangan</th><th class="r">Masuk</th><th class="r">Keluar</th><th class="r">Saldo</th></tr></thead><tbody>${dr}<tr class="tot-row"><td class="c"></td><td colspan="2">TOTAL</td><td></td><td class="r masuk">${rp(h.masuk)}</td><td class="r keluar">${rp(h.keluar)}</td><td class="r">${rp(h.akhir)}</td></tr></tbody></table></div>`:`<div class="empty">Tidak ada transaksi.</div>`}</div>`;
   }
   return h;
 }
