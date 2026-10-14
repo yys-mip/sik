@@ -233,7 +233,7 @@ body.dark .btn-link{background:#5b21b6;color:#ddd6fe;border-color:#7c3aed}
       <div><h2 id="sbTitle">Yayasan Mutiara Islam</h2><small id="sbSub">Prembun</small></div>
     </div>
     <nav class="sb-menu" id="sbMenu"></nav>
-    <div class="sb-foot">v4.1 &middot; Supabase Multi-DB</div>
+    <div class="sb-foot">v4.3 &middot; Supabase Multi-DB</div>
   </aside>
   <div id="main">
     <div id="topbar"></div>
@@ -279,7 +279,7 @@ function defaultDB(){return{users:{},settings:{
   tk:{nama:"Ma'had TK Mutiara Islam Prembun",alamat:'Prembun, Kebumen',ketua:'',bendahara:'',logo:'',npwp:''}
 },years:{yayasan:[],maba:[],sd:[],tk:[]},transaksi:[],events:[],eventTrans:[],permohonan:[],siswa:[],biaya:{sd:{},tk:{}},pembayaran:[],guru:[],gajiGuru:[],gajiPembayaran:[],kegiatan:[],kegiatanTrans:[],kegiatanPembayaran:[]};}
 let DB=defaultDB();
-let state={user:null,page:'dashboard',ctxUnit:'yayasan',eventId:null,eventView:'main',setingView:null,kegiatanId:null,kegiatanView:'ringkasan',bendaharaEventId:null,loadedUnits:[]};
+let state={user:null,page:'dashboard',ctxUnit:'yayasan',eventId:null,eventView:'main',setingView:null,kegiatanId:null,kegiatanView:'ringkasan',bendaharaEventId:null,loadedUnits:[],mutasiView:'keluar'};
 const FILTER={};let showPasswords=false;
 let googleState={accessToken:null,expiresAt:0,userEmail:null,clientId:localStorage.getItem(GCLIENT_KEY)||''};
 
@@ -292,6 +292,8 @@ function toggleDark(){document.body.classList.toggle('dark');const d=document.bo
 function migrateBiaya(db){['sd','tk'].forEach(u=>{db.biaya[u]=db.biaya[u]||{};Object.keys(db.biaya[u]).forEach(t=>{const v=db.biaya[u][t];if(v&&!Array.isArray(v)){db.biaya[u][t]=Object.entries(v).map(([n,j])=>({nama:n,jumlah:Number(j)||0,jenis:'tahunan'}));}else if(!v){db.biaya[u][t]=[];}else{db.biaya[u][t]=v.map(k=>({...k,jenis:k.jenis||'tahunan'}));}});});}
 function migrateKegiatan(db){db.kegiatan=db.kegiatan||[];db.kegiatan.forEach(k=>{if(!Array.isArray(k.kelasList))k.kelasList=TINGKAT[k.unit]||[];if(typeof k.selesai!=='boolean')k.selesai=false;if(!k.selesaiAt)k.selesaiAt='';});}
 function migrateEvents(db){db.events=db.events||[];db.events.forEach(e=>{if(typeof e.selesai!=='boolean')e.selesai=false;if(!e.selesaiAt)e.selesaiAt='';if(!e.bendahara)e.bendahara='';if(!e.bendaharaUsername)e.bendaharaUsername='';});}
+function migrateSiswa(db){db.siswa=(db.siswa||[]).map(s=>{const o={...s};if(!o.status)o.status='Aktif';if(!Array.isArray(o.riwayatMutasi))o.riwayatMutasi=[];if(!o.tanggalKeluar)o.tanggalKeluar='';if(!o.alasanKeluar)o.alasanKeluar='';if(!o.jenisKeluar)o.jenisKeluar='';if(!o.kelasSaatKeluar)o.kelasSaatKeluar='';return o;});}
+function migrateGuru(db){db.guru=(db.guru||[]).map(g=>{const o={...g};if(!o.status)o.status='Aktif';if(!Array.isArray(o.riwayatStatus))o.riwayatStatus=[];if(!o.tanggalKeluar)o.tanggalKeluar='';if(!o.alasanKeluar)o.alasanKeluar='';if(!o.jenisKeluar)o.jenisKeluar='';return o;});}
 
 /* ============ LOAD/SAVE ============ */
 async function loadFromSupabase(units){
@@ -329,7 +331,7 @@ async function loadFromSupabase(units){
     if(!DB.years[u]||!DB.years[u].length)DB.years[u]=[{id:uid(),tahun:currentTahun(u),saldoAwal:0,aktif:true}];
     if(UNITS[u].tipe==='mahad'){TINGKAT[u].forEach(t=>{if(!DB.biaya[u][t])DB.biaya[u][t]=[];});}
   });
-  migrateBiaya(DB);migrateKegiatan(DB);migrateEvents(DB);
+  migrateBiaya(DB);migrateKegiatan(DB);migrateEvents(DB);migrateSiswa(DB);migrateGuru(DB);
 }
 let saveQueue=Promise.resolve();
 function saveDB(){
@@ -670,8 +672,9 @@ async function doLogin(e){
     showSyncStatus('✓ Data dimuat','synced');
     if(usr.role==='jamaah')state.page='laporanMasjid';
     else if(usr.role==='bendahara_program')state.page='programSaya';
+    else if(usr.role==='ketua')state.page='laporanKetua';
     else state.page='dashboard';
-    state.setingView=null;state.kegiatanId=null;state.kegiatanView='ringkasan';state.eventView='main';showPasswords=false;
+    state.setingView=null;state.kegiatanId=null;state.kegiatanView='ringkasan';state.eventView='main';showPasswords=false;state.mutasiView='keluar';
     document.getElementById('loginPage').style.display='none';
     document.getElementById('app').style.display='block';
     render();toast('Selamat datang, '+usr.nama,'ok');
@@ -692,15 +695,19 @@ function menusFor(){
     {id:'event',label:'Program Donasi',ico:'🎉'},{id:'persetujuan',label:'Persetujuan Anggaran',ico:'✅'},
     {id:'laporan',label:'Laporan',ico:'📈'}
   ];
+  // Ketua: tidak ada menu Dashboard
   if(r==='ketua')return [
-    {id:'dashboard',label:'Dashboard',ico:'📊'},{id:'laporan',label:'Laporan',ico:'📈'},
-    {id:'laporanKetua',label:'Laporan Lengkap',ico:'📚'},{id:'persetujuan',label:'Persetujuan Anggaran',ico:'✅'}
+    {id:'laporan',label:'Laporan',ico:'📈'},
+    {id:'laporanKetua',label:'Laporan Lengkap',ico:'📚'},
+    {id:'persetujuan',label:'Persetujuan Anggaran',ico:'✅'}
   ];
-  // Unit / mahad / yayasan (bisa ganti unit)
+  // User yayasan yang sedang melihat unit non-yayasan: HANYA menu Laporan
+  if(r==='yayasan' && state.ctxUnit!=='yayasan'){
+    return [{id:'laporan',label:'Laporan',ico:'📈'}];
+  }
   const u=state.ctxUnit,tp=UNITS[u].tipe;
   const isYayasan = (r === 'yayasan');
   const isViewingYayasan = (u === 'yayasan');
-  // Hide dashboard for yayasan when viewing non-yayasan unit
   const hideDashboard = isYayasan && !isViewingYayasan;
   const m=[];
   if(!hideDashboard) m.push({id:'dashboard',label:'Dashboard',ico:'📊'});
@@ -729,6 +736,8 @@ function renderSidebar(){
   if(state.page==='kegiatanDetail')ap='kegiatan';
   if(state.page==='programSaya')ap='programSaya';
   if(state.page==='bendaharaProgram')ap='event';
+  if(state.page==='mutasiSiswa'||state.page==='alumniSiswa')ap='siswa';
+  if(state.page==='guruKeluar'||state.page==='riwayatGuru')ap='guru';
   const s=DB.settings[state.ctxUnit]||{};
   let title=(s.nama||UNITS[state.ctxUnit].nama).slice(0,34);
   if(state.user.role==='bendahara_program'&&state.user.programId){
@@ -758,22 +767,23 @@ function go(page){
   state.page=page;
   if(page!=='eventDetail'&&page!=='bendaharaProgram'){state.eventId=null;state.eventView='main';}
   if(page!=='kegiatanDetail'){state.kegiatanId=null;state.kegiatanView='ringkasan';}
+  if(page==='mutasiSiswa')state.mutasiView='keluar';
   document.getElementById('sidebar').classList.remove('open');
   render();
 }
 function setSetingView(v){state.setingView=v;render();}
 function setKegiatanView(v){state.kegiatanView=v;render();}
 function setEventView(v){state.eventView=v;render();}
+function setMutasiView(v){state.mutasiView=v;render();}
 function gantiUnit(u){
   state.ctxUnit=u;
   state.setingView=null;
+  state.mutasiView='keluar';
   const menus=menusFor();
-  // Jika halaman saat ini tidak tersedia di menu baru, redirect
   if(!menus.some(m=>m.id===state.page)){
     const hasDashboard=menus.some(m=>m.id==='dashboard');
     if(hasDashboard) state.page='dashboard';
     else {
-      // Yayasan viewing non-yayasan unit: pilih laporan
       const laporan=menus.find(m=>m.id==='laporan');
       state.page = laporan ? 'laporan' : (menus[0]?.id||'laporan');
     }
@@ -786,7 +796,6 @@ function renderPage(){
   const p=state.page;let h='';
   switch(p){
     case 'dashboard':
-      // Safety check: yayasan tidak boleh lihat dashboard non-yayasan
       if(state.user.role==='yayasan' && state.ctxUnit!=='yayasan'){h=pageLaporan();}
       else h=pageDashboard();
       break;
@@ -794,8 +803,12 @@ function renderPage(){
     case 'tahun':h=pageTahun();break;
     case 'transaksi':h=pageTransaksi();break;
     case 'guru':h=pageGuru();break;
+    case 'guruKeluar':h=pageGuruKeluar();break;
+    case 'riwayatGuru':h=pageRiwayatGuru();break;
     case 'gajiGuru':h=pageGajiGuru();break;
     case 'siswa':h=pageSiswa();break;
+    case 'mutasiSiswa':h=pageMutasiSiswa();break;
+    case 'alumniSiswa':h=pageAlumni();break;
     case 'pembayaran':h=pagePembayaran();break;
     case 'rekapPemb':h=pageRekapPemb();break;
     case 'detailPemb':h=pageDetailPemb();break;
@@ -817,10 +830,12 @@ function renderPage(){
 }
 function dashboardFloatingButtons(){
   const u=state.ctxUnit,tp=UNITS[u].tipe,r=state.user.role;
-  if(r==='jamaah'||r==='ketua'||r==='bendahara_program'||r==='yayasan')return '';
+  // Jamaah, ketua, bendahara program tidak dapat input
+  if(r==='jamaah'||r==='ketua'||r==='bendahara_program')return '';
   let b='';
   if(tp==='mahad')b=`<button class="btn accent" onclick="formPembayaranModal()">💳 Pembayaran Siswa</button><button class="btn primary" onclick="formTransaksiModal()">➕ Input Transaksi</button>`;
   else if(tp==='unit')b=`<button class="btn primary" onclick="formTransaksiModal()">➕ Input Transaksi</button>`;
+  else if(tp==='yayasan')b=`<button class="btn primary" onclick="formTransaksiModal()">➕ Input Transaksi</button>`;
   if(!b)return '';
   return `<div class="floating-actions no-print">${b}</div>`;
 }
@@ -853,7 +868,6 @@ function pageDashboard(){
     const pending=DB.permohonan.filter(p=>p.status==='pending').length;
     if(pending>0)h+=`<div class="card" style="border-left:4px solid var(--accent)"><h3>⏳ Menunggu Persetujuan</h3><p style="font-size:13px;color:var(--muted)">Terdapat <strong>${pending}</strong> permohonan menunggu persetujuan.<button class="btn accent sm" style="margin-left:10px" onclick="go('persetujuan')">Lihat</button></p></div>`;
   }
-  /* 5 Transaksi Terakhir */
   const last=DB.transaksi.filter(t=>t.unit===u).sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?1:-1).slice(0,5);
   h+=`<div class="card"><h3>📜 5 Transaksi Terakhir — ${esc(UNITS[u].nama)}</h3>`;
   if(!last.length)h+=`<div class="empty">Belum ada transaksi.</div>`;
@@ -880,7 +894,7 @@ function pageTahun(){
   const th=tahunAktif(u),saldoNow=saldoUnit(u,th);
   const rows=list.map(y=>{const s=saldoUnit(u,y.tahun);return `<tr><td><strong>${esc(y.tahun)}</strong> ${y.aktif?'<span class="badge ok">Aktif</span>':''}</td><td class="r">${rp(y.saldoAwal)}</td><td class="r ${s>=0?'masuk':'keluar'}">${rp(s)}</td><td class="c">${y.aktif?'':`<button class="btn xs success" onclick="aktifkanTahun('${y.id}')">Aktifkan</button>`}<button class="btn xs" onclick="editTahun('${y.id}')">Edit</button><button class="btn xs danger" onclick="hapusTahun('${y.id}')">Hapus</button></td></tr>`;}).join('');
   return `<div class="card"><h3>🔄 Ganti ${lbl}<span class="h3-actions no-print"><button class="btn sm primary" onclick="gantiTahunModal()">🔄 Ganti ${lbl}</button></span></h3>
-  <div class="info-box"><strong>${lbl} Aktif:</strong> ${esc(th)}<br><strong>Saldo Akhir Saat Ini:</strong> ${rp(saldoNow)}<br><span style="font-size:11.5px;color:#64748b">Saat ganti ${lbl.toLowerCase()}, saldo akhir otomatis jadi saldo awal tahun baru. ${isM?'Siswa juga akan otomatis naik kelas.':''}</span></div></div>
+  <div class="info-box"><strong>${lbl} Aktif:</strong> ${esc(th)}<br><strong>Saldo Akhir Saat Ini:</strong> ${rp(saldoNow)}<br><span style="font-size:11.5px;color:#64748b">Saat ganti ${lbl.toLowerCase()}, saldo akhir otomatis jadi saldo awal tahun baru. ${isM?'Siswa juga akan otomatis naik kelas (kelas akhir → Alumni).':''}</span></div></div>
   <div class="card"><h3>📅 Tambah ${lbl} Manual</h3><form onsubmit="tambahTahun(event)"><div class="form-grid"><div class="form-row"><label>${lbl}</label><input type="text" id="thTahun" value="${isM?currentTahun(u):new Date().getFullYear()}" required></div><div class="form-row"><label>Saldo Awal (Rp)</label><input type="number" id="thSaldo" min="0" value="0" required></div></div><div class="form-actions"><button class="btn primary" type="submit">➕ Tambah</button></div></form></div>
   <div class="card"><h3>Daftar ${lbl}</h3>${list.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>${lbl}</th><th class="r">Saldo Awal</th><th class="r">Saldo Akhir</th><th class="c">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada.</div>`}</div>`;
 }
@@ -898,7 +912,7 @@ function gantiTahunModal(){
     const ak=DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif');
     const naik=ak.filter(s=>s.tingkat!==(u==='sd'?'6':'B'));
     const lulus=ak.filter(s=>s.tingkat===(u==='sd'?'6':'B'));
-    si=`<div class="warn-box">⚠️ <strong>Kenaikan Kelas Otomatis:</strong><ul style="margin:8px 0 0 18px;line-height:1.8">${u==='sd'?'<li>1→2,2→3,3→4,4→5,5→6</li><li>Kelas 6 → <strong>Lulus</strong></li>':'<li>A→B</li><li>Kelas B → <strong>Lulus</strong></li>'}</ul><div style="margin-top:8px">Aktif: <strong>${ak.length}</strong> — naik: <strong>${naik.length}</strong>, lulus: <strong>${lulus.length}</strong>.</div></div><div class="form-row" style="margin-top:6px"><label style="flex-direction:row;display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="gtNaikkan" checked style="width:auto"> Naikkan kelas siswa otomatis</label></div>`;
+    si=`<div class="warn-box">⚠️ <strong>Kenaikan Kelas Otomatis:</strong><ul style="margin:8px 0 0 18px;line-height:1.8">${u==='sd'?'<li>1→2,2→3,3→4,4→5,5→6</li><li>Kelas 6 → <strong>Lulus / Alumni</strong></li>':'<li>A→B</li><li>Kelas B → <strong>Lulus / Alumni</strong></li>'}</ul><div style="margin-top:8px">Aktif: <strong>${ak.length}</strong> — naik: <strong>${naik.length}</strong>, lulus jadi alumni: <strong>${lulus.length}</strong>.</div></div><div class="form-row" style="margin-top:6px"><label style="flex-direction:row;display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="gtNaikkan" checked style="width:auto"> Naikkan kelas siswa otomatis (kelas akhir jadi Alumni)</label></div>`;
   }
   showModal(`Ganti ${lbl}`,`<div class="hint" style="margin-bottom:12px"><strong>${lbl} Aktif:</strong> ${esc(old)}<br><strong>Transaksi:</strong> ${tt}<br><strong>Saldo Akhir (jadi Saldo Awal):</strong> <span style="color:#16a34a;font-weight:700">${rp(sa)}</span></div><div class="form-row"><label>${lbl} Baru</label><input id="gtNew" value="${nw}"></div><div class="form-row"><label>Saldo Awal ${lbl} Baru (Rp)</label><input type="number" id="gtSaldo" value="${sa}"></div>${si}<div class="form-actions" style="margin-top:14px"><button class="btn primary" onclick="doGantiTahun()">🔄 Proses Ganti</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>`);
 }
@@ -915,9 +929,20 @@ function doGantiTahun(){
   if(nk){
     const mp=u==='sd'?{'1':'2','2':'3','3':'4','4':'5','5':'6'}:{'A':'B'};
     const last=u==='sd'?'6':'B';
-    DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif').forEach(s=>{if(s.tingkat===last){s.status='Lulus';al++;}else if(mp[s.tingkat]){s.tingkat=mp[s.tingkat];pr++;}});
+    DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif').forEach(s=>{
+      if(s.tingkat===last){
+        s.status='Lulus';
+        s.tanggalKeluar=todayStr();
+        s.jenisKeluar='Lulus';
+        s.alasanKeluar='Otomatis: naik tahun pelajaran';
+        s.kelasSaatKeluar=last;
+        s.riwayatMutasi=s.riwayatMutasi||[];
+        s.riwayatMutasi.push({id:uid(),tanggal:todayStr(),jenis:'keluar',dariKelas:last,keKelas:'-',jenisKeluar:'Lulus',alasan:'Otomatis: naik tahun pelajaran',keterangan:'Lulus / Alumni'});
+        al++;
+      }else if(mp[s.tingkat]){s.tingkat=mp[s.tingkat];pr++;}
+    });
   }
-  saveDB();closeModal();let m=`✅ Berhasil ganti ${lbl} ke ${nt}. Saldo awal: ${rp(sa)}.`;if(nk&&(pr||al))m+=` ${pr} naik kelas, ${al} lulus.`;toast(m,'ok');render();
+  saveDB();closeModal();let m=`✅ Berhasil ganti ${lbl} ke ${nt}. Saldo awal: ${rp(sa)}.`;if(nk&&(pr||al))m+=` ${pr} naik kelas, ${al} jadi alumni.`;toast(m,'ok');render();
 }
 
 /* ============ SETING ============ */
@@ -978,25 +1003,174 @@ function hapusKomponenBiaya(t,idx){const u=state.ctxUnit;const l=getKomponenBiay
 function formPassword(){return `<form onsubmit="gantiPassword(event)"><div class="form-grid"><div class="form-row"><label>Password Lama</label><input type="password" id="pwLama" required></div><div class="form-row"><label>Password Baru</label><input type="password" id="pwBaru" required></div><div class="form-row"><label>Konfirmasi</label><input type="password" id="pwKonf" required></div></div><div class="form-actions"><button class="btn accent" type="submit">🔑 Ubah Password</button></div></form>`;}
 
 /* ============ GURU ============ */
-function pageGuru(){const u=state.ctxUnit;return `<div class="card no-print"><h3>👨‍🏫 Data Guru</h3><div class="hint">Kelola data guru & besaran gaji. Pembayaran gaji di menu <strong>💼 Pembayaran Gaji Guru</strong>.</div></div><div class="card">${viewDataGuru(u)}</div>`;}
+function pageGuru(){
+  const u=state.ctxUnit;
+  return `<div class="card no-print">
+    <h3>👨‍🏫 Data Guru
+      <span class="h3-actions">
+        <button class="btn sm purple" onclick="go('guruKeluar')">🔄 Guru Keluar</button>
+        <button class="btn sm" onclick="go('riwayatGuru')">📜 Riwayat Guru</button>
+      </span>
+    </h3>
+    <div class="hint">Kelola data guru & besaran gaji. Pembayaran gaji di menu <strong>💼 Pembayaran Gaji Guru</strong>.</div>
+  </div>
+  <div class="card">${viewDataGuru(u)}</div>`;
+}
 function viewDataGuru(u){
-  const gs=DB.guru.filter(g=>g.unit===u).sort((a,b)=>(a.nama||'').localeCompare(b.nama||''));
+  const gs=DB.guru.filter(g=>g.unit===u && (g.status||'Aktif')==='Aktif').sort((a,b)=>(a.nama||'').localeCompare(b.nama||''));
+  const tp=UNITS[u].tipe;
   const rows=gs.map(g=>{
     const gaji=gajiAktif(g.id,todayStr());
     const lg=DB.gajiGuru.filter(x=>x.guruId===g.id);
     const ar=lg.find(x=>(x.berlakuMulai||'')<=todayStr())||null;
-    const st=(g.status||'Aktif')==='Aktif'?'<span class="badge ok">Aktif</span>':'<span class="badge no">Nonaktif</span>';
-    return `<tr><td><strong>${esc(g.nama)}</strong>${g.nip?'<br><small style="color:#94a3b8">NIP: '+esc(g.nip)+'</small>':''}</td><td>${esc(g.jabatan||'Guru')}</td><td class="c">${st}</td><td class="r ${gaji>0?'masuk':''}"><strong>${gaji>0?rp(gaji):'-'}</strong>${ar?`<br><small style="color:#94a3b8">Mulai ${fmtTgl(ar.berlakuMulai)}</small>`:''}</td><td class="c">${lg.length}</td><td class="c no-print"><button class="btn xs" onclick="formEditGuru('${g.id}')">✎ Edit</button><button class="btn xs primary" onclick="formRiwayatGaji('${g.id}')">💰 Gaji</button><button class="btn xs danger" onclick="hapusGuru('${g.id}')">🗑</button></td></tr>`;
+    const st='<span class="badge ok">Aktif</span>';
+    // Tombol Keluar hanya untuk non-mahad (SD/TK tidak menampilkan)
+    const keluarBtn = tp!=='mahad' ? `<button class="btn xs purple" onclick="formGuruKeluarLangsung('${g.id}')">🚪 Keluar</button>` : '';
+    return `<tr><td><strong>${esc(g.nama)}</strong>${g.nip?'<br><small style="color:#94a3b8">NIP: '+esc(g.nip)+'</small>':''}</td><td>${esc(g.jabatan||'Guru')}</td><td class="c">${st}</td><td class="r ${gaji>0?'masuk':''}"><strong>${gaji>0?rp(gaji):'-'}</strong>${ar?`<br><small style="color:#94a3b8">Mulai ${fmtTgl(ar.berlakuMulai)}</small>`:''}</td><td class="c">${lg.length}</td><td class="c no-print"><button class="btn xs" onclick="formEditGuru('${g.id}')">✎ Edit</button><button class="btn xs primary" onclick="formRiwayatGaji('${g.id}')">💰 Gaji</button>${keluarBtn}</td></tr>`;
   }).join('');
-  return `<div class="info-box">ℹ️ Kelola data guru & besaran gaji. Perubahan disertai tanggal <strong>berlaku mulai</strong>.</div>
+  return `<div class="info-box">ℹ️ Guru aktif tidak dapat dihapus. Untuk menonaktifkan, gunakan menu <strong>🔄 Guru Keluar</strong>.</div>
   <div class="card" style="border:none;box-shadow:none;padding:0;margin-bottom:14px"><div class="form-actions"><button class="btn primary" onclick="formTambahGuru()">➕ Tambah Guru</button></div></div>
-  <div class="card" style="border:none;box-shadow:none;padding:0"><h3>Daftar Guru (${gs.length})</h3>${gs.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Nama</th><th>Jabatan</th><th class="c">Status</th><th class="r">Gaji Aktif</th><th class="c">Entri</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada guru.</div>`}</div>`;
+  <div class="card" style="border:none;box-shadow:none;padding:0"><h3>Daftar Guru Aktif (${gs.length})</h3>${gs.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Nama</th><th>Jabatan</th><th class="c">Status</th><th class="r">Gaji Aktif</th><th class="c">Entri</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada guru aktif.</div>`}</div>`;
 }
+function pageGuruKeluar(){
+  const u=state.ctxUnit;
+  const keluar=DB.guru.filter(g=>g.unit===u && g.status==='Keluar').sort((a,b)=>(b.tanggalKeluar||'').localeCompare(a.tanggalKeluar||''));
+  const rows=keluar.map((g,i)=>`<tr>
+    <td class="c">${i+1}</td>
+    <td><strong>${esc(g.nama)}</strong>${g.nip?'<br><small style="color:#94a3b8">NIP: '+esc(g.nip)+'</small>':''}</td>
+    <td>${esc(g.jabatan||'-')}</td>
+    <td>${fmtTgl(g.tanggalKeluar)}</td>
+    <td>${esc(g.jenisKeluar||'-')}</td>
+    <td>${esc(g.alasanKeluar||'-')}</td>
+    <td class="c no-print"><button class="btn xs danger" onclick="hapusGuru('${g.id}')">Hapus</button></td>
+  </tr>`).join('');
+  return `<div class="card no-print">
+    <h3>🔄 Guru Keluar
+      <span class="h3-actions">
+        <button class="btn sm ghost" onclick="go('guru')">← Data Guru</button>
+        <button class="btn sm primary" onclick="formPilihGuruKeluar()">➕ Tandai Guru Keluar</button>
+      </span>
+    </h3>
+    <div class="hint">Guru yang ditandai keluar tidak akan muncul di daftar guru aktif dan tidak dapat dibayar gajinya. Guru keluar <strong>boleh dihapus</strong> jika memang perlu dihapus permanen.</div>
+  </div>
+  <div class="card"><h3>Daftar Guru Keluar (${keluar.length})</h3>
+    ${keluar.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr>
+      <th class="c" style="width:40px">No</th><th>Nama</th><th>Jabatan</th><th>Tanggal Keluar</th><th>Jenis</th><th>Alasan</th><th class="c no-print">Aksi</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada guru keluar.</div>`}
+  </div>`;
+}
+function formPilihGuruKeluar(){
+  const u=state.ctxUnit;
+  const aktif=DB.guru.filter(g=>g.unit===u && (g.status||'Aktif')==='Aktif').sort((a,b)=>(a.nama||'').localeCompare(b.nama||''));
+  if(!aktif.length){toast('Tidak ada guru aktif','error');return;}
+  showModal('Tandai Guru Keluar', `
+    <div class="form-row"><label>Guru</label><select id="pgkGuru">
+      <option value="">-- Pilih Guru --</option>
+      ${aktif.map(g=>`<option value="${g.id}">${esc(g.nama)} — ${esc(g.jabatan||'Guru')}</option>`).join('')}
+    </select></div>
+    <div class="form-row"><label>Tanggal Keluar</label><input type="date" id="pgkTanggal" value="${todayStr()}"></div>
+    <div class="form-row"><label>Jenis Keluar</label><select id="pgkJenis">
+      <option value="Pensiun">Pensiun</option>
+      <option value="Mengundurkan Diri">Mengundurkan Diri</option>
+      <option value="Pindah">Pindah Tugas</option>
+      <option value="Lainnya">Lainnya</option>
+    </select></div>
+    <div class="form-row"><label>Alasan / Keterangan</label><input id="pgkAlasan"></div>
+    <div class="form-actions"><button class="btn primary" onclick="simpanGuruKeluar()">✓ Proses</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>
+  `);
+}
+function formGuruKeluarLangsung(gid){
+  const g=DB.guru.find(x=>x.id===gid);
+  if(!g)return;
+  if(g.status==='Keluar'){toast('Guru sudah keluar','error');return;}
+  showModal('Tandai Guru Keluar: '+g.nama, `
+    <div class="form-row"><label>Tanggal Keluar</label><input type="date" id="pgkTanggal" value="${todayStr()}"></div>
+    <div class="form-row"><label>Jenis Keluar</label><select id="pgkJenis">
+      <option value="Pensiun">Pensiun</option>
+      <option value="Mengundurkan Diri">Mengundurkan Diri</option>
+      <option value="Pindah">Pindah Tugas</option>
+      <option value="Lainnya">Lainnya</option>
+    </select></div>
+    <div class="form-row"><label>Alasan / Keterangan</label><input id="pgkAlasan"></div>
+    <div class="form-actions"><button class="btn primary" onclick="simpanGuruKeluar('${gid}')">✓ Proses</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>
+  `);
+}
+function simpanGuruKeluar(gidArg){
+  let gid=gidArg;
+  if(!gid){const sel=document.getElementById('pgkGuru');if(sel)gid=sel.value;}
+  if(!gid){toast('Pilih guru','error');return;}
+  const g=DB.guru.find(x=>x.id===gid);if(!g)return;
+  const tgl=document.getElementById('pgkTanggal').value||todayStr();
+  const jenis=document.getElementById('pgkJenis').value;
+  const alasan=document.getElementById('pgkAlasan').value.trim();
+  g.status='Keluar';
+  g.tanggalKeluar=tgl;
+  g.jenisKeluar=jenis;
+  g.alasanKeluar=alasan;
+  g.riwayatStatus=g.riwayatStatus||[];
+  g.riwayatStatus.push({id:uid(),tanggal:tgl,status:'Keluar',jenis,alasan,keterangan:jenis+(alasan?' - '+alasan:'')});
+  saveDB();closeModal();toast('Guru ditandai keluar','ok');render();
+}
+function pageRiwayatGuru(){
+  const u=state.ctxUnit;
+  const aktif=DB.guru.filter(g=>g.unit===u && (g.status||'Aktif')==='Aktif');
+  const keluar=DB.guru.filter(g=>g.unit===u && g.status==='Keluar').sort((a,b)=>(b.tanggalKeluar||'').localeCompare(a.tanggalKeluar||''));
+  const arows=aktif.sort((a,b)=>(a.nama||'').localeCompare(b.nama||'')).map((g,i)=>`<tr>
+    <td class="c">${i+1}</td>
+    <td><strong>${esc(g.nama)}</strong></td>
+    <td>${esc(g.jabatan||'Guru')}</td>
+    <td>${esc(g.nip||'-')}</td>
+    <td class="c"><span class="badge ok">Aktif</span></td>
+  </tr>`).join('');
+  const krows=keluar.map((g,i)=>`<tr>
+    <td class="c">${i+1}</td>
+    <td><strong>${esc(g.nama)}</strong></td>
+    <td>${esc(g.jabatan||'-')}</td>
+    <td>${fmtTgl(g.tanggalKeluar)}</td>
+    <td>${esc(g.jenisKeluar||'-')}</td>
+    <td>${esc(g.alasanKeluar||'-')}</td>
+    <td class="c"><span class="badge no">Keluar</span></td>
+  </tr>`).join('');
+  return `<div class="card no-print">
+    <h3>📜 Riwayat Guru
+      <span class="h3-actions">
+        <button class="btn sm ghost" onclick="go('guru')">← Data Guru</button>
+        <button class="btn sm" onclick="expRiwayatGuru()">⬇ Excel</button>
+        <button class="btn sm" onclick="cetakRiwayatGuru()">🖨 Cetak</button>
+      </span>
+    </h3>
+  </div>
+  <div class="card"><h3>Guru Aktif (${aktif.length})</h3>
+    ${aktif.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr>
+      <th class="c" style="width:40px">No</th><th>Nama</th><th>Jabatan</th><th>NIP</th><th class="c">Status</th>
+    </tr></thead><tbody>${arows}</tbody></table></div>`:`<div class="empty">Tidak ada guru aktif.</div>`}
+  </div>
+  <div class="card"><h3>Guru Keluar (${keluar.length})</h3>
+    ${keluar.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr>
+      <th class="c" style="width:40px">No</th><th>Nama</th><th>Jabatan</th><th>Tanggal Keluar</th><th>Jenis</th><th>Alasan</th><th class="c">Status</th>
+    </tr></thead><tbody>${krows}</tbody></table></div>`:`<div class="empty">Belum ada guru keluar.</div>`}
+  </div>`;
+}
+function expRiwayatGuru(){const u=state.ctxUnit;const list=DB.guru.filter(g=>g.unit===u);exportExcel('riwayat_guru_'+u,['No','Nama','Jabatan','NIP','Status','Tanggal Keluar','Jenis Keluar','Alasan'],list.map((g,i)=>[i+1,g.nama,g.jabatan||'',g.nip||'',g.status||'Aktif',g.tanggalKeluar?fmtTgl(g.tanggalKeluar):'',g.jenisKeluar||'',g.alasanKeluar||'']));}
+function cetakRiwayatGuru(){const u=state.ctxUnit;const list=DB.guru.filter(g=>g.unit===u).sort((a,b)=>(a.status==='Keluar')-(b.status==='Keluar')||(a.nama||'').localeCompare(b.nama||''));cetakPDF('RIWAYAT GURU','Semua data guru',['No','Nama','Jabatan','NIP','Status','Tanggal Keluar','Alasan'],list.map((g,i)=>[i+1,g.nama,g.jabatan||'',g.nip||'',g.status||'Aktif',g.tanggalKeluar?fmtTgl(g.tanggalKeluar):'-',g.alasanKeluar||'-']),null,u,{tanggal:todayStr()});}
+
 function formTambahGuru(){showModal('Tambah Guru',`<div class="form-row"><label>Nama Lengkap</label><input id="grNama" required></div><div class="form-row"><label>NIP (opsional)</label><input id="grNip"></div><div class="form-row"><label>Jabatan</label><input id="grJabatan" value="Guru"></div><div class="form-row"><label>Status</label><select id="grStatus"><option>Aktif</option><option>Nonaktif</option></select></div><div class="form-actions"><button class="btn primary" onclick="simpanGuruBaru()">💾 Simpan</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>`);}
-function simpanGuruBaru(){const u=state.ctxUnit;const n=document.getElementById('grNama').value.trim();const ni=document.getElementById('grNip').value.trim();const j=document.getElementById('grJabatan').value.trim()||'Guru';const s=document.getElementById('grStatus').value;if(!n){toast('Nama wajib','error');return;}DB.guru.push({id:uid(),unit:u,nama:n,nip:ni,jabatan:j,status:s});saveDB();closeModal();toast('Ditambahkan','ok');render();}
-function formEditGuru(id){const g=DB.guru.find(x=>x.id===id);if(!g)return;showModal('Edit Guru: '+g.nama,`<div class="form-row"><label>Nama</label><input id="egNama" value="${esc(g.nama)}" required></div><div class="form-row"><label>NIP</label><input id="egNip" value="${esc(g.nip||'')}"></div><div class="form-row"><label>Jabatan</label><input id="egJabatan" value="${esc(g.jabatan||'Guru')}"></div><div class="form-row"><label>Status</label><select id="egStatus"><option ${g.status==='Aktif'?'selected':''}>Aktif</option><option ${g.status==='Nonaktif'?'selected':''}>Nonaktif</option></select></div><div class="form-actions"><button class="btn primary" onclick="simpanEditGuru('${id}')">💾 Simpan</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>`);}
-function simpanEditGuru(id){const g=DB.guru.find(x=>x.id===id);if(!g)return;const n=document.getElementById('egNama').value.trim();if(!n){toast('Nama wajib','error');return;}g.nama=n;g.nip=document.getElementById('egNip').value.trim();g.jabatan=document.getElementById('egJabatan').value.trim()||'Guru';g.status=document.getElementById('egStatus').value;saveDB();closeModal();toast('Diperbarui','ok');render();}
-function hapusGuru(id){const g=DB.guru.find(x=>x.id===id);if(!g)return;if(!confirm(`Hapus guru "${g.nama}"?`))return;DB.guru=DB.guru.filter(x=>x.id!==id);DB.gajiGuru=DB.gajiGuru.filter(x=>x.guruId!==id);DB.gajiPembayaran=DB.gajiPembayaran.filter(x=>x.guruId!==id);saveDB();toast('Dihapus','ok');render();}
+function simpanGuruBaru(){const u=state.ctxUnit;const n=document.getElementById('grNama').value.trim();const ni=document.getElementById('grNip').value.trim();const j=document.getElementById('grJabatan').value.trim()||'Guru';const s=document.getElementById('grStatus').value;if(!n){toast('Nama wajib','error');return;}DB.guru.push({id:uid(),unit:u,nama:n,nip:ni,jabatan:j,status:s,riwayatStatus:[],tanggalKeluar:'',jenisKeluar:'',alasanKeluar:''});saveDB();closeModal();toast('Ditambahkan','ok');render();}
+function formEditGuru(id){const g=DB.guru.find(x=>x.id===id);if(!g)return;showModal('Edit Guru: '+g.nama,`<div class="form-row"><label>Nama</label><input id="egNama" value="${esc(g.nama)}" required></div><div class="form-row"><label>NIP</label><input id="egNip" value="${esc(g.nip||'')}"></div><div class="form-row"><label>Jabatan</label><input id="egJabatan" value="${esc(g.jabatan||'Guru')}"></div><div class="form-actions"><button class="btn primary" onclick="simpanEditGuru('${id}')">💾 Simpan</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>`);}
+function simpanEditGuru(id){const g=DB.guru.find(x=>x.id===id);if(!g)return;const n=document.getElementById('egNama').value.trim();if(!n){toast('Nama wajib','error');return;}g.nama=n;g.nip=document.getElementById('egNip').value.trim();g.jabatan=document.getElementById('egJabatan').value.trim()||'Guru';saveDB();closeModal();toast('Diperbarui','ok');render();}
+function hapusGuru(id){
+  const g=DB.guru.find(x=>x.id===id);
+  if(!g)return;
+  if(g.status!=='Keluar'){
+    toast('Hanya guru berstatus Keluar yang dapat dihapus','error');
+    return;
+  }
+  if(!confirm(`Hapus guru "${g.nama}"? Semua riwayat gaji terkait akan dihapus.`))return;
+  DB.guru=DB.guru.filter(x=>x.id!==id);
+  DB.gajiGuru=DB.gajiGuru.filter(x=>x.guruId!==id);
+  DB.gajiPembayaran=DB.gajiPembayaran.filter(x=>x.guruId!==id);
+  saveDB();toast('Dihapus','ok');render();
+}
 function formRiwayatGaji(gid){
   const g=DB.guru.find(x=>x.id===gid);if(!g)return;
   const l=DB.gajiGuru.filter(x=>x.guruId===gid).sort((a,b)=>(a.berlakuMulai||'')<(b.berlakuMulai||'')?1:-1);
@@ -1087,7 +1261,7 @@ function applyBackupTahun(b){
   if(d.kegiatan)DB.kegiatan=DB.kegiatan.filter(k=>k.unit!==u).concat(d.kegiatan);
   if(d.kegiatanTrans)DB.kegiatanTrans=DB.kegiatanTrans.filter(k=>k.unit!==u).concat(d.kegiatanTrans);
   if(d.kegiatanPembayaran)DB.kegiatanPembayaran=DB.kegiatanPembayaran.filter(k=>k.unit!==u).concat(d.kegiatanPembayaran);
-  migrateBiaya(DB);migrateKegiatan(DB);migrateEvents(DB);
+  migrateBiaya(DB);migrateKegiatan(DB);migrateEvents(DB);migrateSiswa(DB);migrateGuru(DB);
 }
 function pageBackupAdmin(){
   const gA=googleState.userEmail||'Belum terhubung';
@@ -1145,7 +1319,7 @@ async function downloadAndRestoreDrive(fid,fn){
     if(!Array.isArray(DB.kegiatan))DB.kegiatan=[];
     if(!Array.isArray(DB.kegiatanTrans))DB.kegiatanTrans=[];
     if(!Array.isArray(DB.kegiatanPembayaran))DB.kegiatanPembayaran=[];
-    migrateBiaya(DB);migrateKegiatan(DB);migrateEvents(DB);
+    migrateBiaya(DB);migrateKegiatan(DB);migrateEvents(DB);migrateSiswa(DB);migrateGuru(DB);
     saveDB();await saveUsers();closeModal();toast('✅ Data di-restore','ok');
     updateLoginLogo();
     if(!DB.users[state.user.username])logout();else render();
@@ -1169,7 +1343,7 @@ function restoreFullLocal(ev){
       if(!Array.isArray(DB.kegiatan))DB.kegiatan=[];
       if(!Array.isArray(DB.kegiatanTrans))DB.kegiatanTrans=[];
       if(!Array.isArray(DB.kegiatanPembayaran))DB.kegiatanPembayaran=[];
-      migrateBiaya(DB);migrateKegiatan(DB);migrateEvents(DB);
+      migrateBiaya(DB);migrateKegiatan(DB);migrateEvents(DB);migrateSiswa(DB);migrateGuru(DB);
       saveDB();await saveUsers();
       toast('✅ Data di-restore','ok');ev.target.value='';
       updateLoginLogo();
@@ -1315,24 +1489,329 @@ function simpanBayarGaji(){
 }
 
 /* ============ SISWA ============ */
-function pageSiswa(){const u=state.ctxUnit;return `<div class="card no-print"><h3>👨‍🎓 Data Siswa</h3><div class="hint">Pembayaran di menu 💳 Pembayaran Siswa; kegiatan di menu 📚 Kegiatan Siswa.</div></div><div class="card">${viewDataSiswa(u)}</div>`;}
-function viewDataSiswa(u){
-  const fk=FILTER.swKelas||'';let l=DB.siswa.filter(s=>s.unit===u);if(fk)l=l.filter(s=>s.tingkat===fk);
-  l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));
-  const rows=l.map((s,i)=>`<tr><td class="c">${i+1}</td><td>${esc(s.nis)}</td><td><strong>${esc(s.nama)}</strong></td><td class="c">${esc(s.tingkat)}</td><td>${esc(s.wali||'-')}</td><td>${esc(s.kontak||'-')}</td><td class="c"><span class="badge ${s.status==='Aktif'?'ok':(s.status==='Lulus'?'info':'no')}">${esc(s.status||'Aktif')}</span></td><td class="c no-print"><button class="btn xs" onclick="editSiswa('${s.id}')">✎ Edit</button><button class="btn xs danger" onclick="hapusSiswa('${s.id}')">🗑</button></td></tr>`).join('');
-  return `<div class="info-box">ℹ️ Kelola data siswa.</div>
-  <div class="card" style="border:none;box-shadow:none;padding:0;margin-bottom:14px"><div class="form-actions" style="justify-content:space-between;align-items:center"><button class="btn primary" onclick="formTambahSiswaModal()">➕ Tambah Siswa</button><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" onclick="downloadTemplateSiswa()">📄 Template</button><label class="btn sm accent" style="margin:0">📥 Import<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importSiswa(event)"></label><button class="btn sm" onclick="expSiswa()">⬇ Excel</button><button class="btn sm" onclick="cetakSiswa()">🖨 Cetak</button></div></div></div>
-  <div class="card" style="border:none;box-shadow:none;padding:0"><h3>Daftar Siswa (${l.length})<span class="h3-actions"><select onchange="setFilter('swKelas',this.value)" style="max-width:180px;padding:5px 10px;font-size:12px;margin:0"><option value="">Semua Kelas</option>${TINGKAT[u].map(t=>`<option value="${esc(t)}" ${t===fk?'selected':''}>Kelas ${esc(t)}</option>`).join('')}</select></span></h3>${l.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>NIS</th><th>Nama</th><th class="c">Tkt</th><th>Wali</th><th>Kontak</th><th class="c">Status</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">${fk?'Tidak ada siswa.':'Belum ada siswa.'}</div>`}</div>`;
+function pageSiswa(){
+  const u=state.ctxUnit;
+  return `<div class="card no-print">
+    <h3>👨‍🎓 Data Siswa
+      <span class="h3-actions">
+        <button class="btn sm purple" onclick="go('mutasiSiswa')">🔄 Mutasi Siswa</button>
+        <button class="btn sm" onclick="go('alumniSiswa')">🎓 Alumni</button>
+      </span>
+    </h3>
+    <div class="hint">Pembayaran di menu 💳 Pembayaran Siswa; kegiatan di menu 📚 Kegiatan Siswa. Siswa yang sudah keluar otomatis dihapus dari kelas.</div>
+  </div>
+  <div class="card">${viewDataSiswa(u)}</div>`;
 }
-function formTambahSiswaModal(){const u=state.ctxUnit;showModal('Tambah Siswa',`<div class="form-grid"><div class="form-row"><label>NIS</label><input id="swNis" required></div><div class="form-row"><label>Nama Lengkap</label><input id="swNama" required></div><div class="form-row"><label>Tingkat</label><select id="swTingkat" required>${TINGKAT[u].map(t=>`<option value="${esc(t)}">Kelas ${esc(t)}</option>`).join('')}</select></div><div class="form-row"><label>Wali</label><input id="swWali"></div><div class="form-row"><label>Kontak</label><input id="swKontak"></div><div class="form-row"><label>Status</label><select id="swStatus"><option>Aktif</option><option>Lulus</option><option>Keluar</option></select></div></div><div class="form-actions"><button class="btn primary" onclick="simpanSiswaBaru()">💾 Simpan</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>`);setTimeout(()=>{const e=document.getElementById('swNis');if(e)e.focus();},20);}
-function simpanSiswaBaru(){const u=state.ctxUnit;const n=document.getElementById('swNis').value.trim();const nm=document.getElementById('swNama').value.trim();const t=document.getElementById('swTingkat').value;const w=document.getElementById('swWali').value.trim();const k=document.getElementById('swKontak').value.trim();const s=document.getElementById('swStatus').value;if(!n){toast('NIS wajib','error');return;}if(!nm){toast('Nama wajib','error');return;}if(DB.siswa.some(x=>x.unit===u&&x.nis===n)){toast('NIS sudah ada','error');return;}DB.siswa.push({id:uid(),unit:u,nis:n,nama:nm,tingkat:t,wali:w,kontak:k,status:s});saveDB();closeModal();toast('Ditambahkan','ok');render();}
-function editSiswa(id){const s=DB.siswa.find(x=>x.id===id);if(!s)return;showModal('Edit Siswa',`<div class="form-row"><label>NIS</label><input id="esNis" value="${esc(s.nis)}"></div><div class="form-row"><label>Nama</label><input id="esNama" value="${esc(s.nama)}"></div><div class="form-row"><label>Tingkat</label><select id="esTingkat">${TINGKAT[state.ctxUnit].map(t=>`<option ${t===s.tingkat?'selected':''}>${esc(t)}</option>`).join('')}</select></div><div class="form-row"><label>Wali</label><input id="esWali" value="${esc(s.wali||'')}"></div><div class="form-row"><label>Kontak</label><input id="esKontak" value="${esc(s.kontak||'')}"></div><div class="form-row"><label>Status</label><select id="esStatus">${['Aktif','Lulus','Keluar'].map(t=>`<option ${t===s.status?'selected':''}>${t}</option>`).join('')}</select></div><div class="form-actions"><button class="btn primary" onclick="simpanEditSiswa('${id}')">Simpan</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>`);}
-function simpanEditSiswa(id){const s=DB.siswa.find(x=>x.id===id);if(!s)return;s.nis=document.getElementById('esNis').value.trim();s.nama=document.getElementById('esNama').value.trim();s.tingkat=document.getElementById('esTingkat').value;s.wali=document.getElementById('esWali').value.trim();s.kontak=document.getElementById('esKontak').value.trim();s.status=document.getElementById('esStatus').value;saveDB();closeModal();toast('Diperbarui','ok');render();}
-function hapusSiswa(id){if(!confirm('Hapus siswa ini? Semua pembayaran terkait akan dihapus juga.'))return;DB.siswa=DB.siswa.filter(s=>s.id!==id);const pi=DB.pembayaran.filter(p=>p.siswaId===id).map(p=>p.id);DB.pembayaran=DB.pembayaran.filter(p=>p.siswaId!==id);DB.transaksi=DB.transaksi.filter(t=>!pi.includes(t.refId));DB.kegiatanPembayaran=DB.kegiatanPembayaran.filter(p=>p.siswaId!==id);saveDB();toast('Dihapus','ok');render();}
-function importSiswa(ev){const f=ev.target.files[0];if(!f)return;const u=state.ctxUnit;const r=new FileReader();r.onload=e=>{let rows=[];try{if(typeof XLSX!=='undefined'){const wb=XLSX.read(e.target.result,{type:'array'});rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,blankrows:false});}}catch(err){toast('Gagal baca','error');return;}if(!rows.length){toast('Kosong','error');return;}let st=0;const h=(rows[0]||[]).map(x=>String(x).toLowerCase());if(h.some(c=>c.includes('nis')||c.includes('nama')))st=1;let ok=0,sk=0;for(let i=st;i<rows.length;i++){const rr=rows[i]||[];const nis=String(rr[0]??'').trim();const nama=String(rr[1]??'').trim();if(!nis||!nama){sk++;continue;}if(DB.siswa.some(s=>s.unit===u&&s.nis===nis)){sk++;continue;}DB.siswa.push({id:uid(),unit:u,nis,nama,tingkat:String(rr[2]??TINGKAT[u][0]).trim(),wali:String(rr[3]??'').trim(),kontak:String(rr[4]??'').trim(),status:String(rr[5]??'Aktif').trim()||'Aktif'});ok++;}saveDB();toast(`Import: ${ok} masuk, ${sk} lewat`,'ok');ev.target.value='';render();};r.readAsArrayBuffer(f);}
+function pageMutasiSiswa(){
+  const u=state.ctxUnit;
+  const v=state.mutasiView||'keluar';
+  const tabs=`<div class="tabs no-print">
+    <button class="tab-btn ${v==='keluar'?'active':''}" onclick="setMutasiView('keluar')">📤 Siswa Keluar</button>
+    <button class="tab-btn ${v==='masuk'?'active':''}" onclick="setMutasiView('masuk')">📥 Siswa Masuk / Pindahan</button>
+    <button class="tab-btn ${v==='riwayat'?'active':''}" onclick="setMutasiView('riwayat')">📜 Riwayat Mutasi</button>
+  </div>`;
+  let c='';
+  if(v==='keluar')c=viewSiswaKeluar(u);
+  else if(v==='masuk')c=viewSiswaMasuk(u);
+  else c=viewRiwayatMutasi(u);
+  return `<div class="card no-print">
+    <h3>🔄 Mutasi Siswa<span class="h3-actions"><button class="btn sm ghost" onclick="go('siswa')">← Kembali ke Data Siswa</button></span></h3>
+    <div class="hint">Siswa keluar otomatis dihapus dari daftar kelas. Siswa masuk/pindahan otomatis masuk ke kelas tujuan.</div>
+  </div>${tabs}${c}`;
+}
+function viewSiswaKeluar(u){
+  const out=DB.siswa.filter(s=>s.unit===u&&(s.status==='Keluar'||s.status==='Lulus')).sort((a,b)=>(b.tanggalKeluar||'').localeCompare(a.tanggalKeluar||''));
+  const rows=out.map((s,i)=>`<tr>
+    <td class="c">${i+1}</td>
+    <td>${esc(s.nis)}</td>
+    <td><strong>${esc(s.nama)}</strong></td>
+    <td class="c">${esc(s.kelasSaatKeluar||s.tingkat)}</td>
+    <td class="c"><span class="badge ${s.status==='Lulus'?'info':'no'}">${esc(s.status)}</span></td>
+    <td>${fmtTgl(s.tanggalKeluar)}</td>
+    <td>${esc(s.jenisKeluar||'-')}</td>
+    <td>${esc(s.alasanKeluar||'-')}</td>
+    <td class="c no-print"><button class="btn xs danger" onclick="hapusSiswa('${s.id}')">Hapus</button></td>
+  </tr>`).join('');
+  return `<div class="card no-print">
+    <h3>📤 Tandai Siswa Keluar<span class="h3-actions"><button class="btn sm primary" onclick="formPilihSiswaKeluar()">➕ Tandai Siswa Keluar</button></span></h3>
+    <div class="hint">Siswa yang keluar tidak akan muncul di kelas dan tidak bisa dibayar lagi. Siswa <strong>Keluar</strong> dan <strong>Lulus</strong> boleh dihapus permanen.</div>
+  </div>
+  <div class="card"><h3>Daftar Siswa Keluar/Lulus (${out.length})</h3>
+    ${out.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr>
+      <th class="c" style="width:40px">No</th><th>NIS</th><th>Nama</th><th class="c">Kelas Akhir</th><th class="c">Status</th><th>Tanggal</th><th>Jenis</th><th>Alasan</th><th class="c no-print">Aksi</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada siswa keluar.</div>`}
+  </div>`;
+}
+function formPilihSiswaKeluar(){
+  const u=state.ctxUnit;
+  const aktif=DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif').sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));
+  if(!aktif.length){toast('Tidak ada siswa aktif','error');return;}
+  showModal('Pilih Siswa Keluar', `
+    <div class="form-row"><label>Siswa</label><select id="pswSiswa">
+      <option value="">-- Pilih Siswa --</option>
+      ${aktif.map(s=>`<option value="${s.id}">Kelas ${esc(s.tingkat)} — ${esc(s.nis)} — ${esc(s.nama)}</option>`).join('')}
+    </select></div>
+    <div class="form-row"><label>Tanggal Keluar</label><input type="date" id="pswTanggal" value="${todayStr()}"></div>
+    <div class="form-row"><label>Jenis Keluar</label><select id="pswJenis">
+      <option value="Pindah">Pindah Sekolah</option>
+      <option value="Keluar">Keluar / Berhenti</option>
+      <option value="Lulus">Lulus</option>
+      <option value="Meninggal">Meninggal</option>
+    </select></div>
+    <div class="form-row"><label>Alasan / Keterangan</label><input id="pswAlasan"></div>
+    <div class="form-actions"><button class="btn primary" onclick="simpanSiswaKeluar()">✓ Proses</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>
+  `);
+}
+function simpanSiswaKeluar(){
+  const sid=document.getElementById('pswSiswa').value;
+  if(!sid){toast('Pilih siswa','error');return;}
+  const s=DB.siswa.find(x=>x.id===sid);if(!s)return;
+  const tgl=document.getElementById('pswTanggal').value||todayStr();
+  const jenis=document.getElementById('pswJenis').value;
+  const alasan=document.getElementById('pswAlasan').value.trim();
+  const statusBaru=jenis==='Lulus'?'Lulus':'Keluar';
+  const kelasLama=s.tingkat;
+  s.status=statusBaru;
+  s.tanggalKeluar=tgl;
+  s.alasanKeluar=alasan;
+  s.jenisKeluar=jenis;
+  s.kelasSaatKeluar=kelasLama;
+  s.riwayatMutasi=s.riwayatMutasi||[];
+  s.riwayatMutasi.push({
+    id:uid(),tanggal:tgl,jenis:'keluar',
+    dariKelas:kelasLama,keKelas:'-',
+    jenisKeluar:jenis,alasan:alasan,
+    keterangan:jenis+(alasan?' - '+alasan:'')
+  });
+  saveDB();closeModal();toast('Siswa ditandai '+statusBaru,'ok');render();
+}
+function viewSiswaMasuk(u){
+  const in_=DB.siswa.filter(s=>s.unit===u && s.riwayatMutasi && s.riwayatMutasi.some(m=>m.jenis==='masuk')).sort((a,b)=>{
+    const ta=(a.riwayatMutasi||[]).filter(m=>m.jenis==='masuk').slice(-1)[0]?.tanggal||'';
+    const tb=(b.riwayatMutasi||[]).filter(m=>m.jenis==='masuk').slice(-1)[0]?.tanggal||'';
+    return tb.localeCompare(ta);
+  });
+  const rows=in_.map((s,i)=>{
+    const m=(s.riwayatMutasi||[]).filter(x=>x.jenis==='masuk').slice(-1)[0]||{};
+    return `<tr>
+      <td class="c">${i+1}</td>
+      <td>${esc(s.nis)}</td>
+      <td><strong>${esc(s.nama)}</strong></td>
+      <td class="c">${esc(s.tingkat)}</td>
+      <td>${fmtTgl(m.tanggal)}</td>
+      <td>${esc(m.jenisKeluar||'-')}</td>
+      <td>${esc(m.asal||'-')}</td>
+      <td>${esc(m.alasan||'-')}</td>
+      <td class="c"><span class="badge ${s.status==='Aktif'?'ok':'no'}">${esc(s.status||'Aktif')}</span></td>
+    </tr>`;
+  }).join('');
+  return `<div class="card no-print">
+    <h3>📥 Siswa Masuk / Pindahan<span class="h3-actions"><button class="btn sm primary" onclick="formSiswaMasuk()">➕ Tambah Siswa Masuk/Pindahan</button></span></h3>
+    <div class="hint">Siswa yang ditambahkan otomatis masuk ke kelas tujuan dan tercatat di riwayat mutasi.</div>
+  </div>
+  <div class="card"><h3>Daftar Siswa Masuk (${in_.length})</h3>
+    ${in_.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr>
+      <th class="c" style="width:40px">No</th><th>NIS</th><th>Nama</th><th class="c">Kelas</th><th>Tanggal Masuk</th><th>Jenis</th><th>Asal</th><th>Keterangan</th><th class="c">Status</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada siswa masuk.</div>`}
+  </div>`;
+}
+function formSiswaMasuk(){
+  const u=state.ctxUnit;
+  showModal('Tambah Siswa Masuk/Pindahan', `
+    <div class="info-box">📥 Siswa baru/pindahan akan otomatis masuk ke kelas yang dipilih.</div>
+    <div class="form-grid">
+      <div class="form-row"><label>NIS</label><input id="smNis" required></div>
+      <div class="form-row"><label>Nama Lengkap</label><input id="smNama" required></div>
+      <div class="form-row"><label>Kelas Tujuan</label><select id="smTingkat">${TINGKAT[u].map(t=>`<option value="${t}">Kelas ${t}</option>`).join('')}</select></div>
+      <div class="form-row"><label>Tanggal Masuk</label><input type="date" id="smTanggal" value="${todayStr()}"></div>
+      <div class="form-row"><label>Jenis</label><select id="smJenis">
+        <option value="Masuk Baru">Masuk Baru</option>
+        <option value="Pindahan">Pindahan</option>
+      </select></div>
+      <div class="form-row"><label>Asal Sekolah</label><input id="smAsal"></div>
+      <div class="form-row"><label>Wali</label><input id="smWali"></div>
+      <div class="form-row"><label>Kontak</label><input id="smKontak"></div>
+    </div>
+    <div class="form-row"><label>Keterangan</label><input id="smKet"></div>
+    <div class="form-actions"><button class="btn primary" onclick="simpanSiswaMasuk()">💾 Simpan</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>
+  `);
+  setTimeout(()=>{const e=document.getElementById('smNis');if(e)e.focus();},20);
+}
+function simpanSiswaMasuk(){
+  const u=state.ctxUnit;
+  const nis=document.getElementById('smNis').value.trim();
+  const nama=document.getElementById('smNama').value.trim();
+  const tingkat=document.getElementById('smTingkat').value;
+  const tgl=document.getElementById('smTanggal').value||todayStr();
+  const jenis=document.getElementById('smJenis').value;
+  const asal=document.getElementById('smAsal').value.trim();
+  const wali=document.getElementById('smWali').value.trim();
+  const kontak=document.getElementById('smKontak').value.trim();
+  const ket=document.getElementById('smKet').value.trim();
+  if(!nis){toast('NIS wajib','error');return;}
+  if(!nama){toast('Nama wajib','error');return;}
+  if(DB.siswa.some(x=>x.unit===u&&x.nis===nis)){toast('NIS sudah ada','error');return;}
+  const id=uid();
+  DB.siswa.push({
+    id,unit:u,nis,nama,tingkat,wali,kontak,
+    status:'Aktif',tanggalKeluar:'',alasanKeluar:'',jenisKeluar:'',kelasSaatKeluar:'',
+    riwayatMutasi:[{
+      id:uid(),tanggal:tgl,jenis:'masuk',
+      dariKelas:'-',keKelas:tingkat,
+      jenisKeluar:jenis,asal:asal,alasan:ket||jenis,
+      keterangan:jenis+(asal?' dari '+asal:'')+(ket?' - '+ket:'')
+    }]
+  });
+  saveDB();closeModal();toast('Siswa masuk ditambahkan','ok');render();
+}
+function viewRiwayatMutasi(u){
+  const list=[];
+  DB.siswa.filter(s=>s.unit===u).forEach(s=>{
+    (s.riwayatMutasi||[]).forEach(m=>{
+      list.push({...m,siswaNama:s.nama,siswaNis:s.nis,siswaId:s.id});
+    });
+  });
+  list.sort((a,b)=>(b.tanggal||'').localeCompare(a.tanggal||''));
+  const rows=list.map((m,i)=>`<tr>
+    <td class="c">${i+1}</td>
+    <td>${fmtTgl(m.tanggal)}</td>
+    <td>${esc(m.siswaNis||'-')}</td>
+    <td><strong>${esc(m.siswaNama||'-')}</strong></td>
+    <td class="c"><span class="badge ${m.jenis==='masuk'?'ok':'no'}">${m.jenis==='masuk'?'Masuk':'Keluar'}</span></td>
+    <td class="c">${esc(m.dariKelas||'-')}</td>
+    <td class="c">${esc(m.keKelas||'-')}</td>
+    <td>${esc(m.keterangan||'-')}</td>
+  </tr>`).join('');
+  return `<div class="card no-print">
+    <h3>📜 Riwayat Mutasi Siswa<span class="h3-actions"><button class="btn sm" onclick="expRiwayatMutasi()">⬇ Excel</button><button class="btn sm" onclick="cetakRiwayatMutasi()">🖨 Cetak</button></span></h3>
+  </div>
+  <div class="card"><h3>Riwayat Mutasi (${list.length})</h3>
+    ${list.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr>
+      <th class="c" style="width:40px">No</th><th>Tanggal</th><th>NIS</th><th>Nama</th><th class="c">Jenis</th><th class="c">Dari</th><th class="c">Ke</th><th>Keterangan</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada riwayat mutasi.</div>`}
+  </div>`;
+}
+function expRiwayatMutasi(){
+  const u=state.ctxUnit;const list=[];
+  DB.siswa.filter(s=>s.unit===u).forEach(s=>(s.riwayatMutasi||[]).forEach(m=>list.push({...m,siswaNama:s.nama,siswaNis:s.nis})));
+  list.sort((a,b)=>(b.tanggal||'').localeCompare(a.tanggal||''));
+  exportExcel('riwayat_mutasi_siswa_'+u,['No','Tanggal','NIS','Nama','Jenis','Dari Kelas','Ke Kelas','Keterangan'],list.map((m,i)=>[i+1,fmtTgl(m.tanggal),m.siswaNis,m.siswaNama,m.jenis==='masuk'?'Masuk':'Keluar',m.dariKelas||'-',m.keKelas||'-',m.keterangan||'']));
+}
+function cetakRiwayatMutasi(){
+  const u=state.ctxUnit;const list=[];
+  DB.siswa.filter(s=>s.unit===u).forEach(s=>(s.riwayatMutasi||[]).forEach(m=>list.push({...m,siswaNama:s.nama,siswaNis:s.nis})));
+  list.sort((a,b)=>(b.tanggal||'').localeCompare(a.tanggal||''));
+  cetakPDF('RIWAYAT MUTASI SISWA',UNITS[u].nama,['No','Tanggal','NIS','Nama','Jenis','Dari','Ke','Keterangan'],list.map((m,i)=>[i+1,fmtTgl(m.tanggal),m.siswaNis,m.siswaNama,m.jenis==='masuk'?'Masuk':'Keluar',m.dariKelas||'-',m.keKelas||'-',m.keterangan||'-']),null,u,{tanggal:todayStr()});
+}
+function pageAlumni(){
+  const u=state.ctxUnit;
+  const list=DB.siswa.filter(s=>s.unit===u && s.status==='Lulus').sort((a,b)=>(b.tanggalKeluar||'').localeCompare(a.tanggalKeluar||'')||a.nama.localeCompare(b.nama));
+  const rows=list.map((s,i)=>`<tr>
+    <td class="c">${i+1}</td>
+    <td>${esc(s.nis)}</td>
+    <td><strong>${esc(s.nama)}</strong></td>
+    <td class="c">${esc(s.kelasSaatKeluar||s.tingkat)}</td>
+    <td>${fmtTgl(s.tanggalKeluar)}</td>
+    <td>${esc(s.wali||'-')}</td>
+    <td>${esc(s.kontak||'-')}</td>
+    <td class="c no-print"><button class="btn xs danger" onclick="hapusSiswa('${s.id}')">Hapus</button></td>
+  </tr>`).join('');
+  return `<div class="card no-print">
+    <h3>🎓 Alumni / Lulusan
+      <span class="h3-actions">
+        <button class="btn sm ghost" onclick="go('siswa')">← Data Siswa</button>
+        <button class="btn sm" onclick="expAlumni()">⬇ Excel</button>
+        <button class="btn sm" onclick="cetakAlumni()">🖨 Cetak</button>
+      </span>
+    </h3>
+    <div class="hint">Daftar siswa berstatus Lulus. Siswa alumni dapat dihapus permanen jika diperlukan.</div>
+  </div>
+  <div class="card"><h3>Daftar Alumni (${list.length})</h3>
+    ${list.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr>
+      <th class="c" style="width:40px">No</th><th>NIS</th><th>Nama</th><th class="c">Kelas Akhir</th><th>Tanggal Lulus</th><th>Wali</th><th>Kontak</th><th class="c no-print">Aksi</th>
+    </tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada alumni.</div>`}
+  </div>`;
+}
+function expAlumni(){const u=state.ctxUnit;const list=DB.siswa.filter(s=>s.unit===u && s.status==='Lulus').sort((a,b)=>(b.tanggalKeluar||'').localeCompare(a.tanggalKeluar||'')||a.nama.localeCompare(b.nama));exportExcel('alumni_'+u,['No','NIS','Nama','Kelas Akhir','Tanggal Lulus','Wali','Kontak'],list.map((s,i)=>[i+1,s.nis,s.nama,s.kelasSaatKeluar||s.tingkat,fmtTgl(s.tanggalKeluar),s.wali||'',s.kontak||'']));}
+function cetakAlumni(){const u=state.ctxUnit;const list=DB.siswa.filter(s=>s.unit===u && s.status==='Lulus').sort((a,b)=>(b.tanggalKeluar||'').localeCompare(a.tanggalKeluar||'')||a.nama.localeCompare(b.nama));cetakPDF('DAFTAR ALUMNI',UNITS[u].nama,['No','NIS','Nama','Kelas Akhir','Tanggal Lulus','Wali'],list.map((s,i)=>[i+1,s.nis,s.nama,s.kelasSaatKeluar||s.tingkat,fmtTgl(s.tanggalKeluar),s.wali||'-']),null,u,{tanggal:todayStr()});}
+
+function viewDataSiswa(u){
+  const fk=FILTER.swKelas||'';
+  const fst=FILTER.swStatus||'Aktif';
+  const tp=UNITS[u].tipe;
+  let l=DB.siswa.filter(s=>s.unit===u);
+  if(fst && fst!=='semua')l=l.filter(s=>(s.status||'Aktif')===fst);
+  if(fk)l=l.filter(s=>s.tingkat===fk);
+  l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));
+  const rows=l.map((s,i)=>{
+    const st=s.status||'Aktif';
+    const badge=st==='Aktif'?'ok':(st==='Lulus'?'info':'no');
+    const canDel=(st==='Lulus'||st==='Keluar');
+    // Tombol Keluar hanya untuk non-mahad (SD/TK tidak menampilkan)
+    const keluarBtn = (st==='Aktif' && tp!=='mahad') ? `<button class="btn xs purple" onclick="formSiswaKeluarLangsung('${s.id}')">🚪 Keluar</button>` : '';
+    return `<tr><td class="c">${i+1}</td><td>${esc(s.nis)}</td><td><strong>${esc(s.nama)}</strong></td><td class="c">${esc(s.tingkat)}</td><td>${esc(s.wali||'-')}</td><td>${esc(s.kontak||'-')}</td><td class="c"><span class="badge ${badge}">${esc(st)}</span></td><td class="c no-print"><button class="btn xs" onclick="editSiswa('${s.id}')">✎ Edit</button>${keluarBtn}${canDel?`<button class="btn xs danger" onclick="hapusSiswa('${s.id}')">🗑</button>`:''}</td></tr>`;
+  }).join('');
+  const statusOpts=[['Aktif','Aktif'],['Lulus','Lulus'],['Keluar','Keluar'],['semua','Semua']];
+  return `<div class="info-box">ℹ️ Siswa aktif tidak dapat dihapus. Untuk mengeluarkan siswa gunakan menu <strong>🔄 Mutasi Siswa</strong>.</div>
+  <div class="card" style="border:none;box-shadow:none;padding:0;margin-bottom:14px"><div class="form-actions" style="justify-content:space-between;align-items:center"><button class="btn primary" onclick="formTambahSiswaModal()">➕ Tambah Siswa</button><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" onclick="downloadTemplateSiswa()">📄 Template</button><label class="btn sm accent" style="margin:0">📥 Import<input type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importSiswa(event)"></label><button class="btn sm" onclick="expSiswa()">⬇ Excel</button><button class="btn sm" onclick="cetakSiswa()">🖨 Cetak</button></div></div></div>
+  <div class="card" style="border:none;box-shadow:none;padding:0"><h3>Daftar Siswa (${l.length})<span class="h3-actions"><select onchange="setFilter('swKelas',this.value)" style="max-width:180px;padding:5px 10px;font-size:12px;margin:0"><option value="">Semua Kelas</option>${TINGKAT[u].map(t=>`<option value="${esc(t)}" ${t===fk?'selected':''}>Kelas ${esc(t)}</option>`).join('')}</select><select onchange="setFilter('swStatus',this.value)" style="max-width:180px;padding:5px 10px;font-size:12px;margin:0">${statusOpts.map(([v,l2])=>`<option value="${v}" ${v===fst?'selected':''}>Status: ${l2}</option>`).join('')}</select></span></h3>${l.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>NIS</th><th>Nama</th><th class="c">Tkt</th><th>Wali</th><th>Kontak</th><th class="c">Status</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">${fk||fst!=='Aktif'?'Tidak ada siswa pada filter ini.':'Belum ada siswa.'}</div>`}</div>`;
+}
+function formTambahSiswaModal(){const u=state.ctxUnit;showModal('Tambah Siswa',`<div class="form-grid"><div class="form-row"><label>NIS</label><input id="swNis" required></div><div class="form-row"><label>Nama Lengkap</label><input id="swNama" required></div><div class="form-row"><label>Tingkat</label><select id="swTingkat" required>${TINGKAT[u].map(t=>`<option value="${esc(t)}">Kelas ${esc(t)}</option>`).join('')}</select></div><div class="form-row"><label>Wali</label><input id="swWali"></div><div class="form-row"><label>Kontak</label><input id="swKontak"></div></div><div class="hint" style="margin-bottom:10px">Status awal: Aktif. Untuk siswa pindahan gunakan menu Mutasi Siswa.</div><div class="form-actions"><button class="btn primary" onclick="simpanSiswaBaru()">💾 Simpan</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>`);setTimeout(()=>{const e=document.getElementById('swNis');if(e)e.focus();},20);}
+function simpanSiswaBaru(){const u=state.ctxUnit;const n=document.getElementById('swNis').value.trim();const nm=document.getElementById('swNama').value.trim();const t=document.getElementById('swTingkat').value;const w=document.getElementById('swWali').value.trim();const k=document.getElementById('swKontak').value.trim();if(!n){toast('NIS wajib','error');return;}if(!nm){toast('Nama wajib','error');return;}if(DB.siswa.some(x=>x.unit===u&&x.nis===n)){toast('NIS sudah ada','error');return;}DB.siswa.push({id:uid(),unit:u,nis:n,nama:nm,tingkat:t,wali:w,kontak:k,status:'Aktif',tanggalKeluar:'',alasanKeluar:'',jenisKeluar:'',kelasSaatKeluar:'',riwayatMutasi:[]});saveDB();closeModal();toast('Ditambahkan','ok');render();}
+function editSiswa(id){const s=DB.siswa.find(x=>x.id===id);if(!s)return;showModal('Edit Siswa',`<div class="form-row"><label>NIS</label><input id="esNis" value="${esc(s.nis)}"></div><div class="form-row"><label>Nama</label><input id="esNama" value="${esc(s.nama)}"></div><div class="form-row"><label>Tingkat</label><select id="esTingkat">${TINGKAT[state.ctxUnit].map(t=>`<option ${t===s.tingkat?'selected':''}>${esc(t)}</option>`).join('')}</select></div><div class="form-row"><label>Wali</label><input id="esWali" value="${esc(s.wali||'')}"></div><div class="form-row"><label>Kontak</label><input id="esKontak" value="${esc(s.kontak||'')}"></div><div class="form-actions"><button class="btn primary" onclick="simpanEditSiswa('${id}')">Simpan</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>`);}
+function simpanEditSiswa(id){const s=DB.siswa.find(x=>x.id===id);if(!s)return;s.nis=document.getElementById('esNis').value.trim();s.nama=document.getElementById('esNama').value.trim();s.tingkat=document.getElementById('esTingkat').value;s.wali=document.getElementById('esWali').value.trim();s.kontak=document.getElementById('esKontak').value.trim();saveDB();closeModal();toast('Diperbarui','ok');render();}
+function formSiswaKeluarLangsung(sid){
+  const s=DB.siswa.find(x=>x.id===sid);if(!s)return;
+  if((s.status||'Aktif')!=='Aktif'){toast('Siswa tidak aktif','error');return;}
+  showModal('Siswa Keluar: '+s.nama, `
+    <div class="info-box">📤 Siswa akan ditandai keluar dan tidak lagi muncul di kelas.</div>
+    <div class="form-row"><label>Tanggal Keluar</label><input type="date" id="pswTanggal" value="${todayStr()}"></div>
+    <div class="form-row"><label>Jenis Keluar</label><select id="pswJenis">
+      <option value="Pindah">Pindah Sekolah</option>
+      <option value="Keluar">Keluar / Berhenti</option>
+      <option value="Lulus">Lulus</option>
+      <option value="Meninggal">Meninggal</option>
+    </select></div>
+    <div class="form-row"><label>Alasan / Keterangan</label><input id="pswAlasan"></div>
+    <div class="form-actions"><button class="btn primary" onclick="simpanSiswaKeluarLangsung('${sid}')">✓ Proses</button><button class="btn ghost" onclick="closeModal()">Batal</button></div>
+  `);
+}
+function simpanSiswaKeluarLangsung(sid){
+  const s=DB.siswa.find(x=>x.id===sid);if(!s)return;
+  const tgl=document.getElementById('pswTanggal').value||todayStr();
+  const jenis=document.getElementById('pswJenis').value;
+  const alasan=document.getElementById('pswAlasan').value.trim();
+  const statusBaru=jenis==='Lulus'?'Lulus':'Keluar';
+  const kelasLama=s.tingkat;
+  s.status=statusBaru;
+  s.tanggalKeluar=tgl;
+  s.alasanKeluar=alasan;
+  s.jenisKeluar=jenis;
+  s.kelasSaatKeluar=kelasLama;
+  s.riwayatMutasi=s.riwayatMutasi||[];
+  s.riwayatMutasi.push({id:uid(),tanggal:tgl,jenis:'keluar',dariKelas:kelasLama,keKelas:'-',jenisKeluar:jenis,alasan:alasan,keterangan:jenis+(alasan?' - '+alasan:'')});
+  saveDB();closeModal();toast('Siswa ditandai '+statusBaru,'ok');render();
+}
+function hapusSiswa(id){
+  const s=DB.siswa.find(x=>x.id===id);
+  if(!s)return;
+  const st=s.status||'Aktif';
+  if(st!=='Lulus' && st!=='Keluar'){
+    toast('Hanya siswa berstatus Lulus atau Keluar yang dapat dihapus','error');
+    return;
+  }
+  if(!confirm('Hapus siswa ini? Semua pembayaran terkait akan dihapus juga.'))return;
+  DB.siswa=DB.siswa.filter(x=>x.id!==id);
+  const pi=DB.pembayaran.filter(p=>p.siswaId===id).map(p=>p.id);
+  DB.pembayaran=DB.pembayaran.filter(p=>p.siswaId!==id);
+  DB.transaksi=DB.transaksi.filter(t=>!pi.includes(t.refId));
+  DB.kegiatanPembayaran=DB.kegiatanPembayaran.filter(p=>p.siswaId!==id);
+  saveDB();toast('Dihapus','ok');render();
+}
+function importSiswa(ev){const f=ev.target.files[0];if(!f)return;const u=state.ctxUnit;const r=new FileReader();r.onload=e=>{let rows=[];try{if(typeof XLSX!=='undefined'){const wb=XLSX.read(e.target.result,{type:'array'});rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,blankrows:false});}}catch(err){toast('Gagal baca','error');return;}if(!rows.length){toast('Kosong','error');return;}let st=0;const h=(rows[0]||[]).map(x=>String(x).toLowerCase());if(h.some(c=>c.includes('nis')||c.includes('nama')))st=1;let ok=0,sk=0;for(let i=st;i<rows.length;i++){const rr=rows[i]||[];const nis=String(rr[0]??'').trim();const nama=String(rr[1]??'').trim();if(!nis||!nama){sk++;continue;}if(DB.siswa.some(s=>s.unit===u&&s.nis===nis)){sk++;continue;}DB.siswa.push({id:uid(),unit:u,nis,nama,tingkat:String(rr[2]??TINGKAT[u][0]).trim(),wali:String(rr[3]??'').trim(),kontak:String(rr[4]??'').trim(),status:'Aktif',tanggalKeluar:'',alasanKeluar:'',jenisKeluar:'',kelasSaatKeluar:'',riwayatMutasi:[]});ok++;}saveDB();toast(`Import: ${ok} masuk, ${sk} lewat`,'ok');ev.target.value='';render();};r.readAsArrayBuffer(f);}
 function downloadTemplateSiswa(){exportExcel('template_siswa',['NIS','Nama','Tingkat','Wali','Kontak','Status'],[['12345','Ahmad Fauzi','1','Bapak Fauzi','08123456789','Aktif']]);}
-function expSiswa(){const u=state.ctxUnit,fk=FILTER.swKelas||'';let l=DB.siswa.filter(s=>s.unit===u);if(fk)l=l.filter(s=>s.tingkat===fk);l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));exportExcel('data_siswa_'+u+(fk?'_kelas_'+fk:''),['No','NIS','Nama','Tingkat','Wali','Kontak','Status'],l.map((s,i)=>[i+1,s.nis,s.nama,s.tingkat,s.wali||'',s.kontak||'',s.status||'Aktif']));}
-function cetakSiswa(){const u=state.ctxUnit,fk=FILTER.swKelas||'';let l=DB.siswa.filter(s=>s.unit===u);if(fk)l=l.filter(s=>s.tingkat===fk);l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));cetakPDF('Daftar Siswa'+(fk?' — Kelas '+fk:''),'Total '+l.length+' siswa',['No','NIS','Nama','Tingkat','Wali','Kontak','Status'],l.map((s,i)=>[i+1,s.nis,s.nama,s.tingkat,s.wali||'-',s.kontak||'-',s.status||'Aktif']),null,null,{tanggal:todayStr()});}
+function expSiswa(){const u=state.ctxUnit,fk=FILTER.swKelas||'',fst=FILTER.swStatus||'Aktif';let l=DB.siswa.filter(s=>s.unit===u);if(fst&&fst!=='semua')l=l.filter(s=>(s.status||'Aktif')===fst);if(fk)l=l.filter(s=>s.tingkat===fk);l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));exportExcel('data_siswa_'+u+(fk?'_kelas_'+fk:''),['No','NIS','Nama','Tingkat','Wali','Kontak','Status'],l.map((s,i)=>[i+1,s.nis,s.nama,s.tingkat,s.wali||'',s.kontak||'',s.status||'Aktif']));}
+function cetakSiswa(){const u=state.ctxUnit,fk=FILTER.swKelas||'',fst=FILTER.swStatus||'Aktif';let l=DB.siswa.filter(s=>s.unit===u);if(fst&&fst!=='semua')l=l.filter(s=>(s.status||'Aktif')===fst);if(fk)l=l.filter(s=>s.tingkat===fk);l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));cetakPDF('Daftar Siswa'+(fk?' — Kelas '+fk:''),'Total '+l.length+' siswa',['No','NIS','Nama','Tingkat','Wali','Kontak','Status'],l.map((s,i)=>[i+1,s.nis,s.nama,s.tingkat,s.wali||'-',s.kontak||'-',s.status||'Aktif']),null,null,{tanggal:todayStr()});}
 
 /* ============ PEMBAYARAN SISWA ============ */
 function hitungTagihan(u,s){return getKomponenBiaya(u,s.tingkat).reduce((a,k)=>{const j=Number(k.jumlah)||0;return a+((k.jenis||'tahunan')==='bulanan'?j*12:j);},0);}
@@ -1349,7 +1828,7 @@ function pagePembayaran(){
   const rows=h.slice(0,300).map((p,i)=>{const s=DB.siswa.find(x=>x.id===p.siswaId);return `<tr><td class="c">${i+1}</td><td>${fmtTgl(p.tanggal)}</td><td>${esc(s?s.nis:'-')}</td><td>${esc(s?s.nama:'(dihapus)')}</td><td class="c">${esc(s?s.tingkat:'-')}</td><td>${esc(p.komponen)}</td><td>${esc(p.keterangan||'-')}</td><td class="r masuk">${rp(p.jumlah)}</td><td class="c no-print"><button class="btn xs" onclick="formEditPembayaran('${p.id}')">Edit</button><button class="btn xs danger" onclick="hapusPembayaran('${p.id}')">Hapus</button></td></tr>`;}).join('');
   const tot=h.reduce((a,b)=>a+Number(b.jumlah),0);
   const tl=Array.from(new Set(DB.pembayaran.filter(p=>p.unit===u).map(p=>tahunDariTanggal(u,p.tanggal)))).sort();if(!tl.includes(th))tl.push(th);
-  let ls=DB.siswa.filter(s=>s.unit===u);if(fk)ls=ls.filter(s=>s.tingkat===fk);
+  let ls=DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif');if(fk)ls=ls.filter(s=>s.tingkat===fk);
   ls.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));
   return `<div class="card no-print"><h3>💳 Pembayaran Siswa<span class="h3-actions"><button class="btn sm primary" onclick="formPembayaranModal()">➕ Input Pembayaran</button><button class="btn sm accent" onclick="go('rekapPemb')">📋 Rekap</button><button class="btn sm purple" onclick="go('detailPemb')">🔍 Detail</button></span></h3>
   <div class="filters"><div><label>Kelas</label><select onchange="setFilter('pbKelas',this.value); setFilter('pbSiswa','')"><option value="">Semua Kelas</option>${TINGKAT[u].map(t=>`<option value="${esc(t)}" ${t===fk?'selected':''}>Kelas ${esc(t)}</option>`).join('')}</select></div>
@@ -1357,27 +1836,27 @@ function pagePembayaran(){
   <div><label>Tahun</label><select onchange="setFilter('bayTahun',this.value)">${tl.map(t=>`<option value="${t}" ${t===th?'selected':''}>${esc(t)}</option>`).join('')}</select></div>
   <div><label>Bulan</label><select onchange="setFilter('bayBulan',this.value)"><option value="">Semua</option>${BULAN.map((b,i)=>`<option value="${String(i+1).padStart(2,'0')}" ${String(i+1).padStart(2,'0')===bl?'selected':''}>${b}</option>`).join('')}</select></div>
   <button class="btn ghost sm" onclick="resetFilterPembayaran()">↺ Reset</button></div>
-  <div class="hint">ℹ️ Biaya <strong>bulanan</strong> otomatis ×12.</div></div>
+  <div class="hint">ℹ️ Biaya <strong>bulanan</strong> otomatis ×12. Hanya siswa aktif yang dapat dibayar.</div></div>
   <div class="card"><h3>📜 Riwayat Pembayaran<span class="h3-actions no-print"><button class="btn sm" onclick="expPembayaran()">⬇ Excel</button><button class="btn sm" onclick="cetakPembayaran()">🖨 Cetak</button></span></h3>
   ${h.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>NIS</th><th>Nama</th><th class="c">Tkt</th><th>Komponen</th><th>Ket</th><th class="r">Jumlah</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}<tr class="tot-row"><td colspan="7">TOTAL</td><td class="r">${rp(tot)}</td><td class="no-print"></td></tr></tbody></table></div>`:`<div class="empty">Belum ada.</div>`}</div>`;
 }
 function resetFilterPembayaran(){delete FILTER.pbKelas;delete FILTER.pbSiswa;delete FILTER.bayTahun;delete FILTER.bayBulan;render();}
 function pageRekapPemb(){
   const u=state.ctxUnit,fk=FILTER.rpKelas||'',fs=FILTER.rpSiswa||'';
-  let l=DB.siswa.filter(s=>s.unit===u);if(fk)l=l.filter(s=>s.tingkat===fk);if(fs)l=l.filter(s=>s.id===fs);
+  let l=DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif');if(fk)l=l.filter(s=>s.tingkat===fk);if(fs)l=l.filter(s=>s.id===fs);
   l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));
   const rows=l.map((s,i)=>{const t=hitungTagihan(u,s);const b=hitungBayar(s.id);const si=t-b;const ps=t>0?Math.min(100,Math.round(b/t*100)):0;const st=(t>0&&si<=0)?'<span class="badge ok">Lunas</span>':(b>0?'<span class="badge pending">Kurang</span>':(t>0?'<span class="badge no">Belum</span>':'<span class="badge info">—</span>'));return `<tr><td class="c">${i+1}</td><td>${esc(s.nis)}</td><td><strong>${esc(s.nama)}</strong></td><td class="c">${esc(s.tingkat)}</td><td class="r">${rp(t)}</td><td class="r masuk">${rp(b)}</td><td class="r ${si>0?'keluar':'masuk'}">${rp(si)}</td><td style="min-width:110px"><div class="bar"><i style="width:${ps}%"></i></div><small style="color:#94a3b8">${ps}%</small></td><td class="c">${st}</td><td class="c no-print"><button class="btn xs primary" onclick="showDetailPembayaranSiswa('${s.id}')">Detail</button></td></tr>`;}).join('');
   const tt=l.reduce((a,s)=>a+hitungTagihan(u,s),0);const tb=l.reduce((a,s)=>a+hitungBayar(s.id),0);
   return `<div class="card no-print"><h3>📋 Rekap Pembayaran<span class="h3-actions"><button class="btn sm ghost" onclick="go('pembayaran')">← Pembayaran</button><button class="btn sm" onclick="expRekap()">⬇ Excel</button><button class="btn sm" onclick="cetakRekap()">🖨 Cetak</button></span></h3>
   <div class="filters"><div><label>Kelas</label><select onchange="setFilter('rpKelas',this.value); setFilter('rpSiswa','')"><option value="">Semua Kelas</option>${TINGKAT[u].map(t=>`<option value="${esc(t)}" ${t===fk?'selected':''}>Kelas ${esc(t)}</option>`).join('')}</select></div>
-  <div style="min-width:220px"><label>Siswa</label><select onchange="setFilter('rpSiswa',this.value)"><option value="">Semua</option>${DB.siswa.filter(s=>s.unit===u&&(!fk||s.tingkat===fk)).sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama)).map(s=>`<option value="${s.id}" ${s.id===fs?'selected':''}>${esc(s.tingkat)} — ${esc(s.nis)} — ${esc(s.nama)}</option>`).join('')}</select></div>
+  <div style="min-width:220px"><label>Siswa</label><select onchange="setFilter('rpSiswa',this.value)"><option value="">Semua</option>${DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif'&&(!fk||s.tingkat===fk)).sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama)).map(s=>`<option value="${s.id}" ${s.id===fs?'selected':''}>${esc(s.tingkat)} — ${esc(s.nis)} — ${esc(s.nama)}</option>`).join('')}</select></div>
   <button class="btn ghost sm" onclick="setFilter('rpKelas',''); setFilter('rpSiswa','')">↺ Reset</button></div></div>
   <div class="cards compact"><div class="stat compact"><span>Total Tagihan</span><strong>${rp(tt)}</strong></div><div class="stat compact green"><span>Total Dibayar</span><strong>${rp(tb)}</strong></div><div class="stat compact red"><span>Kekurangan</span><strong>${rp(tt-tb)}</strong></div><div class="stat compact amber"><span>Progres</span><strong>${tt>0?Math.round(tb/tt*100):0}%</strong></div></div>
-  <div class="card"><h3>Tabel Rekap</h3>${l.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>NIS</th><th>Nama</th><th class="c">Tkt</th><th class="r">Tagihan</th><th class="r">Dibayar</th><th class="r">Kurang</th><th>Progress</th><th class="c">Status</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}<tr class="tot-row"><td colspan="4">TOTAL</td><td class="r">${rp(tt)}</td><td class="r">${rp(tb)}</td><td class="r">${rp(tt-tb)}</td><td colspan="3"></td></tr></tbody></table></div>`:`<div class="empty">Tidak ada siswa.</div>`}</div>`;
+  <div class="card"><h3>Tabel Rekap</h3>${l.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>NIS</th><th>Nama</th><th class="c">Tkt</th><th class="r">Tagihan</th><th class="r">Dibayar</th><th class="r">Kurang</th><th>Progress</th><th class="c">Status</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}<tr class="tot-row"><td colspan="4">TOTAL</td><td class="r">${rp(tt)}</td><td class="r">${rp(tb)}</td><td class="r">${rp(tt-tb)}</td><td colspan="3"></td></tr></tbody></table></div>`:`<div class="empty">Tidak ada siswa aktif.</div>`}</div>`;
 }
 function pageDetailPemb(){
   const u=state.ctxUnit,fk=FILTER.dpKelas||'',fs=FILTER.dpSiswa||'';
-  let ls=DB.siswa.filter(s=>s.unit===u);if(fk)ls=ls.filter(s=>s.tingkat===fk);
+  let ls=DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif');if(fk)ls=ls.filter(s=>s.tingkat===fk);
   ls.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));
   let dh='';
   if(fs){
@@ -1412,6 +1891,7 @@ function simpanPembayaran(){
   const u=state.ctxUnit;const sid=document.getElementById('pbSiswa').value;const ko=document.getElementById('pbKomponen').value;const tgl=document.getElementById('pbTanggal').value;const jml=Number(document.getElementById('pbJumlah').value);const ket=document.getElementById('pbKet').value.trim();
   const s=DB.siswa.find(x=>x.id===sid);
   if(!s){toast('Pilih siswa','error');return;}if(!ko){toast('Pilih komponen','error');return;}if(!tgl){toast('Tanggal wajib','error');return;}if(!jml||jml<=0){toast('Jumlah tidak valid','error');return;}
+  if((s.status||'Aktif')!=='Aktif'){toast('Siswa tidak aktif','error');return;}
   const th=tahunDariTanggal(u,tgl);const pid=uid();
   DB.pembayaran.push({id:pid,unit:u,siswaId:sid,komponen:ko,jumlah:jml,tanggal:tgl,keterangan:ket,tahun:th});
   if(!(DB.years[u]||[]).some(y=>y.tahun===th)){DB.years[u]=DB.years[u]||[];DB.years[u].push({id:uid(),tahun:th,saldoAwal:0,aktif:false});}
@@ -1453,8 +1933,8 @@ function showDetailPembayaranSiswa(id){
   <div class="section-title">Riwayat</div>${bl?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Komponen</th><th>Ket</th><th class="r">Jumlah</th></tr></thead><tbody>${bl}</tbody></table></div>`:'<div class="empty">Belum ada.</div>'}
   <div class="form-actions" style="margin-top:16px"><button class="btn primary" onclick="closeModal(); formPembayaranModal('${s.id}');">➕ Tambah</button><button class="btn ghost" onclick="closeModal(); setFilter('dpKelas','${esc(s.tingkat)}'); setFilter('dpSiswa','${s.id}'); go('detailPemb');">🔍 Buka Detail</button><button class="btn ghost" onclick="closeModal()">Tutup</button></div>`);
 }
-function expRekap(){const u=state.ctxUnit,fk=FILTER.rpKelas||'',fs=FILTER.rpSiswa||'';let l=DB.siswa.filter(s=>s.unit===u);if(fk)l=l.filter(s=>s.tingkat===fk);if(fs)l=l.filter(s=>s.id===fs);l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));const rows=l.map((s,i)=>{const t=hitungTagihan(u,s),b=hitungBayar(s.id);return [i+1,s.nis,s.nama,s.tingkat,t,b,t-b,(t>0&&b>=t)?'Lunas':(b>0?'Kurang':'Belum')];});exportExcel('rekap_pembayaran_'+u,['No','NIS','Nama','Kelas','Tagihan','Dibayar','Kekurangan','Status'],rows);}
-function cetakRekap(){const u=state.ctxUnit,fk=FILTER.rpKelas||'',fs=FILTER.rpSiswa||'';let l=DB.siswa.filter(s=>s.unit===u);if(fk)l=l.filter(s=>s.tingkat===fk);if(fs)l=l.filter(s=>s.id===fs);l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));const rows=l.map((s,i)=>{const t=hitungTagihan(u,s),b=hitungBayar(s.id);return [i+1,s.nis,s.nama,s.tingkat,rp(t),rp(b),rp(t-b)];});const tt=l.reduce((a,s)=>a+hitungTagihan(u,s),0);const tb=l.reduce((a,s)=>a+hitungBayar(s.id),0);cetakPDF('REKAP PEMBAYARAN SISWA','Per siswa',['No','NIS','Nama','Kelas','Tagihan','Dibayar','Kurang'],rows,['','TOTAL','','',rp(tt),rp(tb),rp(tt-tb)],null,{tanggal:todayStr()});}
+function expRekap(){const u=state.ctxUnit,fk=FILTER.rpKelas||'',fs=FILTER.rpSiswa||'';let l=DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif');if(fk)l=l.filter(s=>s.tingkat===fk);if(fs)l=l.filter(s=>s.id===fs);l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));const rows=l.map((s,i)=>{const t=hitungTagihan(u,s),b=hitungBayar(s.id);return [i+1,s.nis,s.nama,s.tingkat,t,b,t-b,(t>0&&b>=t)?'Lunas':(b>0?'Kurang':'Belum')];});exportExcel('rekap_pembayaran_'+u,['No','NIS','Nama','Kelas','Tagihan','Dibayar','Kekurangan','Status'],rows);}
+function cetakRekap(){const u=state.ctxUnit,fk=FILTER.rpKelas||'',fs=FILTER.rpSiswa||'';let l=DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif');if(fk)l=l.filter(s=>s.tingkat===fk);if(fs)l=l.filter(s=>s.id===fs);l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));const rows=l.map((s,i)=>{const t=hitungTagihan(u,s),b=hitungBayar(s.id);return [i+1,s.nis,s.nama,s.tingkat,rp(t),rp(b),rp(t-b)];});const tt=l.reduce((a,s)=>a+hitungTagihan(u,s),0);const tb=l.reduce((a,s)=>a+hitungBayar(s.id),0);cetakPDF('REKAP PEMBAYARAN SISWA','Per siswa',['No','NIS','Nama','Kelas','Tagihan','Dibayar','Kurang'],rows,['','TOTAL','','',rp(tt),rp(tb),rp(tt-tb)],null,{tanggal:todayStr()});}
 function cetakDetailSiswa(sid){const u=state.ctxUnit;const s=DB.siswa.find(x=>x.id===sid);if(!s)return;const kl=komponenListUntukSiswa(u,s);const rows=kl.map((k,i)=>{const t=Number(k.tagihan)||0;const b=hitungBayarKomponen(s.id,k.nama);const si=t-b;const st=(t>0&&si<=0)?'Lunas':(b>0?'Kurang':(t>0?'Belum':'-'));return [i+1,k.nama,rp(t),rp(b),rp(si),st];});const tt=kl.reduce((a,k)=>a+(Number(k.tagihan)||0),0);const tb=hitungBayar(s.id);cetakPDF('DETAIL PEMBAYARAN SISWA',`${s.nama} — NIS ${s.nis} — Kelas ${s.tingkat}`,['No','Komponen','Tagihan','Dibayar','Sisa','Status'],rows,['','TOTAL',rp(tt),rp(tb),rp(tt-tb),(tt>0&&tb>=tt)?'Lunas':'Belum Lunas'],null,{tanggal:todayStr()});}
 function dataPembayaranFilter(){const u=state.ctxUnit,th=FILTER.bayTahun||tahunAktif(u),bl=FILTER.bayBulan||'',fk=FILTER.pbKelas||'',fs=FILTER.pbSiswa||'';let d=DB.pembayaran.filter(p=>p.unit===u);if(th)d=d.filter(p=>tahunDariTanggal(u,p.tanggal)===th);if(bl)d=d.filter(p=>(p.tanggal||'').slice(5,7)===bl);if(fs)d=d.filter(p=>p.siswaId===fs);else if(fk){const ids=new Set(DB.siswa.filter(s=>s.unit===u&&s.tingkat===fk).map(s=>s.id));d=d.filter(p=>ids.has(p.siswaId));}return d.sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?-1:1);}
 function expPembayaran(){const rows=dataPembayaranFilter().map((p,i)=>{const s=DB.siswa.find(x=>x.id===p.siswaId);return [i+1,fmtTgl(p.tanggal),s?s.nis:'',s?s.nama:'',s?s.tingkat:'',p.komponen,p.keterangan||'',Number(p.jumlah)];});exportExcel('pembayaran_'+state.ctxUnit,['No','Tanggal','NIS','Nama','Kelas','Komponen','Keterangan','Jumlah'],rows);}
@@ -1516,7 +1996,6 @@ function pageKegiatanDetail(){
   else if(v==='dana')c=viewKegiatanDana(kg);
   return headerHtml+tabsHtml+c;
 }
-/* Ringkasan: riwayat transaksi (semua) + tombol cetak laporan */
 function viewKegiatanRingkasan(kg){
   const items=[];
   DB.kegiatanPembayaran.filter(p=>p.kegiatanId===kg.id).forEach(p=>{
@@ -1655,16 +2134,16 @@ function simpanEditKegiatanPembayaran(id){
 }
 function viewKegiatanRekap(kg){
   const u=state.ctxUnit;const kl=kegiatanKelasList(kg);const fk=FILTER.kgRekapKelas||'';
-  let l=DB.siswa.filter(s=>s.unit===u&&kl.includes(s.tingkat));
+  let l=DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif'&&kl.includes(s.tingkat));
   if(fk&&kl.includes(fk))l=l.filter(s=>s.tingkat===fk);
   l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));
   const bi=Number(kg.biayaPerSiswa)||0;const isS=!!kg.selesai;
   const rows=l.map((s,i)=>{const b=totalBayarKegiatanSiswa(kg.id,s.id);const tg=Math.max(0,bi-b);const ps=bi>0?Math.min(100,Math.round(b/bi*100)):0;const st=(bi>0&&tg<=0)?'<span class="badge ok">Lunas</span>':(b>0?'<span class="badge pending">Kurang</span>':(bi>0?'<span class="badge no">Belum</span>':'<span class="badge info">—</span>'));return `<tr><td class="c">${i+1}</td><td>${esc(s.nis)}</td><td><strong>${esc(s.nama)}</strong></td><td class="c">${esc(s.tingkat)}</td><td class="r">${rp(bi)}</td><td class="r masuk">${rp(b)}</td><td class="r ${tg>0?'keluar':'masuk'}">${rp(tg)}</td><td style="min-width:100px"><div class="bar"><i style="width:${ps}%"></i></div><small style="color:#94a3b8">${ps}%</small></td><td class="c">${st}</td><td class="c no-print">${!isS?`<button class="btn xs primary" onclick="formKegiatanPembayaranModal('${s.id}')">💳 Bayar</button>`:'-'}</td></tr>`;}).join('');
   return `<div class="card no-print"><h3>📊 Rekap & Tunggakan — ${esc(kg.nama)}<span class="h3-actions"><button class="btn sm" onclick="expKegiatanRekap('${kg.id}')">⬇ Excel</button><button class="btn sm" onclick="cetakKegiatanRekap('${kg.id}')">🖨 Cetak</button></span></h3><div class="filters"><div><label>Kelas</label><select onchange="setFilter('kgRekapKelas',this.value)"><option value="">Semua Kelas Kegiatan</option>${kl.map(t=>`<option value="${esc(t)}" ${t===fk?'selected':''}>Kelas ${esc(t)}</option>`).join('')}</select></div><button class="btn ghost sm" onclick="setFilter('kgRekapKelas','')">↺ Reset</button></div></div>
-  <div class="card"><h3>Rincian per Siswa</h3>${l.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>NIS</th><th>Nama</th><th class="c">Tkt</th><th class="r">Tagihan</th><th class="r">Dibayar</th><th class="r">Tunggakan</th><th>Progress</th><th class="c">Status</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Tidak ada siswa.</div>`}</div>`;
+  <div class="card"><h3>Rincian per Siswa</h3>${l.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>NIS</th><th>Nama</th><th class="c">Tkt</th><th class="r">Tagihan</th><th class="r">Dibayar</th><th class="r">Tunggakan</th><th>Progress</th><th class="c">Status</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Tidak ada siswa aktif.</div>`}</div>`;
 }
-function expKegiatanRekap(kid){const kg=DB.kegiatan.find(k=>k.id===kid);if(!kg)return;const u=state.ctxUnit,kl=kegiatanKelasList(kg),fk=FILTER.kgRekapKelas||'';let l=DB.siswa.filter(s=>s.unit===u&&kl.includes(s.tingkat));if(fk&&kl.includes(fk))l=l.filter(s=>s.tingkat===fk);l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));const bi=Number(kg.biayaPerSiswa)||0;const rows=l.map((s,i)=>{const b=totalBayarKegiatanSiswa(kg.id,s.id);const tg=Math.max(0,bi-b);return [i+1,s.nis,s.nama,s.tingkat,bi,b,tg,bi>0&&b>=bi?'Lunas':(b>0?'Kurang':'Belum')];});exportExcel('rekap_kegiatan_'+(kg.nama||'').replace(/\s+/g,'_'),['No','NIS','Nama','Tingkat','Tagihan','Dibayar','Tunggakan','Status'],rows);}
-function cetakKegiatanRekap(kid){const kg=DB.kegiatan.find(k=>k.id===kid);if(!kg)return;const u=state.ctxUnit,kl=kegiatanKelasList(kg),fk=FILTER.kgRekapKelas||'';let l=DB.siswa.filter(s=>s.unit===u&&kl.includes(s.tingkat));if(fk&&kl.includes(fk))l=l.filter(s=>s.tingkat===fk);l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));const bi=Number(kg.biayaPerSiswa)||0;const rows=l.map((s,i)=>{const b=totalBayarKegiatanSiswa(kg.id,s.id);const tg=Math.max(0,bi-b);return [i+1,s.nis,s.nama,s.tingkat,rp(bi),rp(b),rp(tg)];});const tt=l.length*bi;const tb=l.reduce((a,s)=>a+totalBayarKegiatanSiswa(kg.id,s.id),0);cetakPDF('REKAP PEMBAYARAN KEGIATAN: '+kg.nama,'Tanggal: '+fmtTgl(kg.tanggal),['No','NIS','Nama','Tingkat','Tagihan','Dibayar','Tunggakan'],rows,['','TOTAL','','',rp(tt),rp(tb),rp(tt-tb)],null,{tanggal:todayStr()});}
+function expKegiatanRekap(kid){const kg=DB.kegiatan.find(k=>k.id===kid);if(!kg)return;const u=state.ctxUnit,kl=kegiatanKelasList(kg),fk=FILTER.kgRekapKelas||'';let l=DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif'&&kl.includes(s.tingkat));if(fk&&kl.includes(fk))l=l.filter(s=>s.tingkat===fk);l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));const bi=Number(kg.biayaPerSiswa)||0;const rows=l.map((s,i)=>{const b=totalBayarKegiatanSiswa(kg.id,s.id);const tg=Math.max(0,bi-b);return [i+1,s.nis,s.nama,s.tingkat,bi,b,tg,bi>0&&b>=bi?'Lunas':(b>0?'Kurang':'Belum')];});exportExcel('rekap_kegiatan_'+(kg.nama||'').replace(/\s+/g,'_'),['No','NIS','Nama','Tingkat','Tagihan','Dibayar','Tunggakan','Status'],rows);}
+function cetakKegiatanRekap(kid){const kg=DB.kegiatan.find(k=>k.id===kid);if(!kg)return;const u=state.ctxUnit,kl=kegiatanKelasList(kg),fk=FILTER.kgRekapKelas||'';let l=DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif'&&kl.includes(s.tingkat));if(fk&&kl.includes(fk))l=l.filter(s=>s.tingkat===fk);l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));const bi=Number(kg.biayaPerSiswa)||0;const rows=l.map((s,i)=>{const b=totalBayarKegiatanSiswa(kg.id,s.id);const tg=Math.max(0,bi-b);return [i+1,s.nis,s.nama,s.tingkat,rp(bi),rp(b),rp(tg)];});const tt=l.length*bi;const tb=l.reduce((a,s)=>a+totalBayarKegiatanSiswa(kg.id,s.id),0);cetakPDF('REKAP PEMBAYARAN KEGIATAN: '+kg.nama,'Tanggal: '+fmtTgl(kg.tanggal),['No','NIS','Nama','Tingkat','Tagihan','Dibayar','Tunggakan'],rows,['','TOTAL','','',rp(tt),rp(tb),rp(tt-tb)],null,{tanggal:todayStr()});}
 function viewKegiatanDana(kg){
   const u=state.ctxUnit;const isS=!!kg.selesai;
   const rd=DB.kegiatanTrans.filter(t=>t.kegiatanId===kg.id&&t.refId).sort((a,b)=>(a.tanggal||'')<(b.tanggal||'')?1:-1);
@@ -1758,7 +2237,6 @@ function pageProgramSaya(){
   state.eventId=evId;
   return pageEventDetail();
 }
-/* HALAMAN Kelola Bendahara Program */
 function pageBendaharaProgram(){
   const evId = state.bendaharaEventId || state.eventId;
   const ev = DB.events.find(e=>e.id===evId);
@@ -1809,7 +2287,6 @@ function kembaliKeEvent(){
   state.page = 'eventDetail';
   render();
 }
-/* View Dana Program Donasi */
 function viewEventDana(ev){
   const u = ev.unit;
   const isS = !!ev.selesai;
@@ -1862,8 +2339,6 @@ function pageEventDetail(){
   }).join('');
   const kl=labelKasUnit(u),sks=saldoUnit(u,tahunAktif(u));
   const bHtml=(ev.bendahara||ev.bendaharaUsername)?`<div style="margin-top:4px">Bendahara: <strong>${esc(ev.bendahara||'-')}</strong>${ev.bendaharaUsername?` <small style="color:#94a3b8">(@${esc(ev.bendaharaUsername)})</small>`:''}</div>`:'';
-  
-  /* Bendahara program — view sederhana */
   if(isB){
     return `<div class="card">
       <h3>🎉 ${esc(ev.nama)} ${isS?'<span class="badge selesai">Selesai '+fmtTgl(ev.selesaiAt)+'</span>':''}
@@ -1880,13 +2355,7 @@ function pageEventDetail(){
     ${!isS?`<div class="btn-row no-print"><button class="btn sm primary" onclick="formBuatDonasiProgram('${ev.id}')">➕ Input Pemasukan/Pengeluaran</button></div>`:''}
     <div class="card no-print"><h3>Riwayat Transaksi</h3>${trs.length?`<div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Jenis</th><th>Keterangan</th><th class="r">Jumlah</th><th class="c no-print">Aksi</th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="empty">Belum ada.</div>`}</div>`;
   }
-  
-  /* View DANA (transfer) */
-  if(evView === 'dana'){
-    return viewEventDana(ev);
-  }
-  
-  /* View MAIN */
+  if(evView === 'dana'){ return viewEventDana(ev); }
   return `<div class="card">
     <h3>🎉 ${esc(ev.nama)} ${isS?'<span class="badge selesai">Selesai '+fmtTgl(ev.selesaiAt)+'</span>':''}
       <span class="h3-actions no-print">
@@ -2164,7 +2633,7 @@ function pageLaporan(){
     h+=`<div class="card"><h3>Rekap Saldo Seluruh Unit<span class="h3-actions no-print"><button class="btn sm" onclick="expRekapUnit()">⬇ Excel</button><button class="btn sm" onclick="cetakRekapUnit()">🖨 Cetak</button></span></h3><div class="tbl-wrap"><table class="tbl"><thead><tr><th class="c" style="width:40px">No</th><th>Unit</th><th class="c">Tahun</th><th class="r">Saldo Awal</th><th class="r">Masuk</th><th class="r">Keluar</th><th class="r">Saldo Akhir</th></tr></thead><tbody>${rows}</tbody></table></div><div class="hint">Total saldo unit (tanpa yayasan): <strong>${rp(tot)}</strong></div></div>`;
   }
   else if(j==='siswa'){
-    const l=DB.siswa.filter(s=>s.unit===u).sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));
+    const l=DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif').sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama));
     const ka=Array.from(new Set(l.flatMap(s=>getKomponenBiaya(u,s.tingkat).map(k=>k.nama))));
     const rows=l.map((s,i)=>{const b=ka.map(k=>hitungBayarKomponen(s.id,k));const tot=b.reduce((a,c)=>a+c,0);return `<tr><td class="c">${i+1}</td><td>${esc(s.nis)}</td><td>${esc(s.nama)}</td><td class="c">${esc(s.tingkat)}</td>${b.map(v=>`<td class="r ${v>0?'masuk':''}">${v?rp(v):'-'}</td>`).join('')}<td class="r"><strong>${rp(tot)}</strong></td></tr>`;}).join('');
     const tk=ka.map(k=>l.reduce((a,s)=>a+hitungBayarKomponen(s.id,k),0));const g=tk.reduce((a,b)=>a+b,0);
@@ -2319,8 +2788,8 @@ function expLapEvent(){const evs=DB.events.filter(e=>e.unit===state.ctxUnit);exp
 function cetakLapEvent(){const evs=DB.events.filter(e=>e.unit===state.ctxUnit);const rows=evs.map((e,i)=>{const m=DB.eventTrans.filter(t=>t.eventId===e.id&&t.jenis==='masuk').reduce((a,b)=>a+Number(b.jumlah),0);const k=DB.eventTrans.filter(t=>t.eventId===e.id&&t.jenis==='keluar').reduce((a,b)=>a+Number(b.jumlah),0);return [i+1,e.nama+(e.selesai?' (Selesai)':''),fmtTgl(e.tanggal),rp(m),rp(k),rp(m-k)];});cetakPDF('LAPORAN PROGRAM DONASI','',['No','Program','Tanggal','Pemasukan','Pengeluaran','Saldo'],rows,null,null,{tanggal:todayStr()});}
 function expRekapUnit(){const rows=ALL_UNITS.map((un,i)=>{const t=tahunAktif(un);return [i+1,UNITS[un].nama,t,saldoAwal(un,t),saldoUnit(un,t)];});exportExcel('rekap_unit',['No','Unit','Tahun','Saldo Awal','Saldo Akhir'],rows);}
 function cetakRekapUnit(){const rows=ALL_UNITS.map((un,i)=>{const t=tahunAktif(un);return [i+1,UNITS[un].nama,t,rp(saldoAwal(un,t)),rp(saldoUnit(un,t))];});cetakPDF('REKAP SALDO SELURUH UNIT','',['No','Unit','Tahun','Saldo Awal','Saldo Akhir'],rows,null,'yayasan',{tanggal:todayStr()});}
-function expLapSiswa(){const u=state.ctxUnit;const l=DB.siswa.filter(s=>s.unit===u);const ka=Array.from(new Set(l.flatMap(s=>getKomponenBiaya(u,s.tingkat).map(k=>k.nama))));const rows=l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama)).map((s,i)=>{const b=ka.map(k=>hitungBayarKomponen(s.id,k));return [i+1,s.nis,s.nama,s.tingkat,...b,b.reduce((a,c)=>a+c,0)];});exportExcel('laporan_siswa_'+u,['No','NIS','Nama','Tingkat',...ka,'Total'],rows);}
-function cetakLapSiswa(){const u=state.ctxUnit;const l=DB.siswa.filter(s=>s.unit===u);const ka=Array.from(new Set(l.flatMap(s=>getKomponenBiaya(u,s.tingkat).map(k=>k.nama))));const rows=l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama)).map((s,i)=>{const b=ka.map(k=>hitungBayarKomponen(s.id,k));return [i+1,s.nis,s.nama,s.tingkat,...b.map(v=>rp(v)),rp(b.reduce((a,c)=>a+c,0))];});cetakPDF('LAPORAN PEMBAYARAN SISWA','Rekap per komponen biaya',['No','NIS','Nama','Tkt',...ka,'Total'],rows,null,null,{tanggal:todayStr()});}
+function expLapSiswa(){const u=state.ctxUnit;const l=DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif');const ka=Array.from(new Set(l.flatMap(s=>getKomponenBiaya(u,s.tingkat).map(k=>k.nama))));const rows=l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama)).map((s,i)=>{const b=ka.map(k=>hitungBayarKomponen(s.id,k));return [i+1,s.nis,s.nama,s.tingkat,...b,b.reduce((a,c)=>a+c,0)];});exportExcel('laporan_siswa_'+u,['No','NIS','Nama','Tingkat',...ka,'Total'],rows);}
+function cetakLapSiswa(){const u=state.ctxUnit;const l=DB.siswa.filter(s=>s.unit===u&&(s.status||'Aktif')==='Aktif');const ka=Array.from(new Set(l.flatMap(s=>getKomponenBiaya(u,s.tingkat).map(k=>k.nama))));const rows=l.sort((a,b)=>(a.tingkat+'').localeCompare(b.tingkat+'')||a.nama.localeCompare(b.nama)).map((s,i)=>{const b=ka.map(k=>hitungBayarKomponen(s.id,k));return [i+1,s.nis,s.nama,s.tingkat,...b.map(v=>rp(v)),rp(b.reduce((a,c)=>a+c,0))];});cetakPDF('LAPORAN PEMBAYARAN SISWA','Rekap per komponen biaya',['No','NIS','Nama','Tkt',...ka,'Total'],rows,null,null,{tanggal:todayStr()});}
 function expLapKegiatan(){const u=state.ctxUnit;const kgs=DB.kegiatan.filter(k=>k.unit===u);exportExcel('laporan_kegiatan_'+u,['No','Nama Kegiatan','Tanggal','Status','Biaya/Siswa','Bayar Siswa','Pemasukan Lain','Pengeluaran','Saldo'],kgs.map((k,i)=>{const b=kegiatanPemasukanSiswa(k.id),m=kegiatanTransMasuk(k.id),kl=kegiatanTransKeluar(k.id);return [i+1,k.nama,fmtTgl(k.tanggal),k.selesai?'Selesai':'Aktif',Number(k.biayaPerSiswa)||0,b,m,kl,b+m-kl];}));}
 function cetakLapKegiatan(){const u=state.ctxUnit;const kgs=DB.kegiatan.filter(k=>k.unit===u);const rows=kgs.map((k,i)=>{const b=kegiatanPemasukanSiswa(k.id),m=kegiatanTransMasuk(k.id),kl=kegiatanTransKeluar(k.id);return [i+1,k.nama+(k.selesai?' (Selesai)':''),fmtTgl(k.tanggal),rp(k.biayaPerSiswa||0),rp(b),rp(m),rp(kl),rp(b+m-kl)];});const tB=kgs.reduce((a,k)=>a+kegiatanPemasukanSiswa(k.id),0),tM=kgs.reduce((a,k)=>a+kegiatanTransMasuk(k.id),0),tK=kgs.reduce((a,k)=>a+kegiatanTransKeluar(k.id),0);cetakPDF('LAPORAN KEGIATAN SISWA','Tidak termasuk transaksi sekolah',['No','Nama Kegiatan','Tanggal','Biaya/Siswa','Bayar Siswa','Masuk Lain','Pengeluaran','Saldo'],rows,['','TOTAL','','',rp(tB),rp(tM),rp(tK),rp(tB+tM-tK)],null,{tanggal:todayStr()});}
 
