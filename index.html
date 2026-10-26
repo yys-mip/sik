@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sistem Laporan Keuangan - Yayasan Mutiara Islam Prembun</title>
-<!-- Versi 3.7.4: teks "Supabase Multi-DB" dihapus dari sidebar. Versi 3.7.3: nomor versi tampil di halaman login & sidebar (otomatis dari APP_VERSION). Versi 3.7.2: batas 50 KB hanya untuk foto (PDF maks 5 MB). Versi 3.7.1: ukuran bukti maks 50 KB (gambar dikompres otomatis). Versi 3.7: Bukti transaksi (foto/PDF) di semua unit, disimpan di Supabase Storage bucket "bukti-transaksi". Versi 3.6.1 (pesan dikirim di langkah ke-2 setelah PDF): kirim laporan PDF ke donatur via WhatsApp + menu Template Pesan WA -->
+<!-- Versi 3.8.0: setiap jenis data (transaksi, event, siswa, pembayaran, guru, gaji, tahun, biaya) disimpan di tabel sendiri di semua unit; jalankan supabase-tabel-terpisah.sql. Versi 3.7.4: teks "Supabase Multi-DB" dihapus dari sidebar. Versi 3.7.3: nomor versi tampil di halaman login & sidebar (otomatis dari APP_VERSION). Versi 3.7.2: batas 50 KB hanya untuk foto (PDF maks 5 MB). Versi 3.7.1: ukuran bukti maks 50 KB (gambar dikompres otomatis). Versi 3.7: Bukti transaksi (foto/PDF) di semua unit, disimpan di Supabase Storage bucket "bukti-transaksi". Versi 3.6.1 (pesan dikirim di langkah ke-2 setelah PDF): kirim laporan PDF ke donatur via WhatsApp + menu Template Pesan WA -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -254,7 +254,7 @@ body.dark .chip{background:#334155;color:#5eead4;border-color:#475569}
       </div>
       <button class="btn primary" type="submit" id="loginBtn">Masuk</button>
     </form>
-    <div class="login-foot">© Yayasan Mutiara Islam Prembun<br>Versi <strong class="app-ver">3.7.4</strong></div>
+    <div class="login-foot">© Yayasan Mutiara Islam Prembun<br>Versi <strong class="app-ver">3.8.0</strong></div>
   </div>
 </div>
 
@@ -268,7 +268,7 @@ body.dark .chip{background:#334155;color:#5eead4;border-color:#475569}
       </div>
     </div>
     <nav class="sb-menu" id="sbMenu"></nav>
-    <div class="sb-foot">Versi <strong class="app-ver">3.7.4</strong></div>
+    <div class="sb-foot">Versi <strong class="app-ver">3.8.0</strong></div>
   </aside>
   <div id="main">
     <div id="topbar"></div>
@@ -306,7 +306,7 @@ function supabaseClientFor(unit){
 /* =========================================================
    1. KONSTANTA APLIKASI
    ========================================================= */
-const APP_VERSION = '3.7.4';
+const APP_VERSION = '3.8.0';
 const GCLIENT_KEY = 'mip_gclient_id';
 function tampilkanVersi(){ document.querySelectorAll('.app-ver').forEach(el => el.textContent = APP_VERSION); document.title = document.title.replace(/\s*\(v[\d.]+\)$/,'') + ' (v' + APP_VERSION + ')'; }
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tampilkanVersi); else tampilkanVersi();
@@ -462,27 +462,23 @@ async function loadFromSupabase(unitsToLoad){
   });
   DB.users = usersMap;
 
-  const promises = unitsToLoad.map(u =>
-    supabaseClientFor(u).from('app_units').select('*').eq('unit_key', u).maybeSingle()
-  );
-  const results = await Promise.all(promises);
+  state.legacyUnits = new Set();
+  state.appRowAda = {};
+  state.needMigrate = [];
+  SYNC.last = {}; SYNC.settings = {};
 
-  unitsToLoad.forEach((u, idx)=>{
+  const results = await Promise.all(unitsToLoad.map(u =>
+    supabaseClientFor(u).from('app_units').select('*').eq('unit_key', u).maybeSingle()
+  ));
+
+  for(let idx = 0; idx < unitsToLoad.length; idx++){
+    const u = unitsToLoad[idx];
     const row = results[idx]?.data;
-    if(row){
-      DB.settings[u]  = row.settings  || DB.settings[u]  || {};
-      DB.years[u]     = row.years     || [];
-      DB.biaya[u]     = row.biaya     || {};
-      (row.transaksi        || []).forEach(x => DB.transaksi.push(x));
-      (row.events           || []).forEach(x => DB.events.push(x));
-      (row.event_trans      || []).forEach(x => DB.eventTrans.push(x));
-      (row.permohonan       || []).forEach(x => DB.permohonan.push(x));
-      (row.siswa            || []).forEach(x => DB.siswa.push(x));
-      (row.pembayaran       || []).forEach(x => DB.pembayaran.push(x));
-      (row.guru             || []).forEach(x => DB.guru.push(x));
-      (row.gaji_guru        || []).forEach(x => DB.gajiGuru.push(x));
-      (row.gaji_pembayaran  || []).forEach(x => DB.gajiPembayaran.push(x));
-    }
+    state.appRowAda[u] = !!row;
+    if(row) DB.settings[u] = row.settings || DB.settings[u] || {};
+    SYNC.settings[u] = (row && row.migrated_v38) ? JSON.stringify(DB.settings[u] || {}) : null;
+    await muatTabelUnit(u, row);
+
     if(!DB.settings[u]) DB.settings[u] = defaultDB().settings[u];
     if(!DB.biaya[u])    DB.biaya[u] = {};
     if(!DB.years[u] || !DB.years[u].length){
@@ -493,11 +489,17 @@ async function loadFromSupabase(unitsToLoad){
         if(!DB.biaya[u][t]) DB.biaya[u][t] = [];
       });
     }
-  });
+  }
 
   if(unitsToLoad.includes('yayasan')) await loadDonatur();
 
   migrateBiaya(DB);
+
+  /* v3.8.0: pindahkan data lama (JSON di app_units) ke tabel terpisah, otomatis sekali per unit */
+  if(state.needMigrate.length){
+    showSyncStatus('Memindahkan data ke tabel terpisah...', 'syncing');
+    await saveDB();
+  }
 }
 
 /* ---- Donatur: tabel Supabase 'donatur' (project 1) ---- */
@@ -532,12 +534,164 @@ async function loadDonatur(){
   }
 }
 
-let saveQueue = Promise.resolve();
-function saveDB(){
-  const units = state.loadedUnits || [];
-  if(!units.length) return Promise.resolve();
+/* =========================================================
+   v3.8.0: SETIAP JENIS DATA DISIMPAN DI TABEL SENDIRI
+   (berlaku untuk semua unit: yayasan, maba -> project 1; sd, tk -> project 2)
+   Tabel: transaksi, events, event_trans, permohonan, siswa, pembayaran,
+          guru, gaji_guru, gaji_pembayaran, tahun_ajaran, komponen_biaya
+   Pengaturan unit (nama, alamat, logo, dst) tetap di app_units.settings
+   ========================================================= */
+const SYNC = { last:{}, settings:{} };
+const S_ = v => (v === undefined || v === null) ? null : String(v);
+const N_ = v => Number(v) || 0;
 
-  const snapshot = units.map(u=>({
+function defFlat(tabel, dbKey, unitOf, kolom){
+  return {
+    tabel,
+    get : u => DB[dbKey].filter(x => x && unitOf(x) === u),
+    set : (u, items) => { items.forEach(x => DB[dbKey].push(x)); },
+    lama: row => Array.isArray(row[tabel]) ? row[tabel] : [],
+    kolom
+  };
+}
+const TABEL = [
+  defFlat('transaksi', 'transaksi', x=>x.unit, x=>({
+    tahun:S_(x.tahun), tanggal:S_(x.tanggal), jenis:S_(x.jenis), kategori:S_(x.kategori),
+    jumlah:N_(x.jumlah), keterangan:S_(x.keterangan), ref_id:S_(x.refId) })),
+  defFlat('events', 'events', x=>x.unit, x=>({
+    nama:S_(x.nama), tanggal:S_(x.tanggal), target:N_(x.target), keterangan:S_(x.keterangan) })),
+  defFlat('event_trans', 'eventTrans', x=>x.unit, x=>({
+    event_id:S_(x.eventId), tanggal:S_(x.tanggal), jenis:S_(x.jenis),
+    jumlah:N_(x.jumlah), keterangan:S_(x.keterangan) })),
+  defFlat('permohonan', 'permohonan', x=>x.dari, x=>({
+    jenis:S_(x.jenis), jumlah:N_(x.jumlah), tanggal:S_(x.tanggal), keterangan:S_(x.keterangan),
+    event_id:S_(x.eventId), status:S_(x.status) })),
+  defFlat('siswa', 'siswa', x=>x.unit, x=>({
+    nis:S_(x.nis), nama:S_(x.nama), tingkat:S_(x.tingkat), wali:S_(x.wali),
+    kontak:S_(x.kontak), status:S_(x.status) })),
+  defFlat('pembayaran', 'pembayaran', x=>x.unit, x=>({
+    siswa_id:S_(x.siswaId), komponen:S_(x.komponen), jumlah:N_(x.jumlah),
+    tanggal:S_(x.tanggal), keterangan:S_(x.keterangan), tahun:S_(x.tahun) })),
+  defFlat('guru', 'guru', x=>x.unit, x=>({
+    nama:S_(x.nama), nip:S_(x.nip), jabatan:S_(x.jabatan), status:S_(x.status) })),
+  defFlat('gaji_guru', 'gajiGuru', x=>x.unit, x=>({
+    guru_id:S_(x.guruId), jumlah:N_(x.jumlah), berlaku_mulai:S_(x.berlakuMulai), keterangan:S_(x.keterangan) })),
+  defFlat('gaji_pembayaran', 'gajiPembayaran', x=>x.unit, x=>({
+    guru_id:S_(x.guruId), jumlah:N_(x.jumlah), bulan:S_(x.bulan),
+    tanggal:S_(x.tanggal), keterangan:S_(x.keterangan) })),
+  { /* tahun ajaran / tahun buku */
+    tabel:'tahun_ajaran',
+    get : u => (DB.years[u] || []).filter(Boolean),
+    set : (u, items) => { DB.years[u] = items; },
+    lama: row => Array.isArray(row.years) ? row.years : [],
+    kolom: x => ({ tahun:S_(x.tahun), saldo_awal:N_(x.saldoAwal), aktif:!!x.aktif })
+  },
+  { /* komponen biaya per tingkat (SD/TK): satu baris per tingkat */
+    tabel:'komponen_biaya',
+    get : u => Object.entries(DB.biaya[u] || {}).map(([tingkat, komponen]) => ({ id:u+':'+tingkat, tingkat, komponen })),
+    set : (u, items) => { DB.biaya[u] = {}; items.forEach(x => { DB.biaya[u][x.tingkat] = x.komponen; }); },
+    lama: (row, u) => Object.entries(row.biaya || {}).map(([tingkat, komponen]) => ({ id:u+':'+tingkat, tingkat, komponen })),
+    kolom: x => ({ tingkat:S_(x.tingkat) })
+  }
+];
+
+async function ambilSemuaBaris(client, tabel, unit){
+  const out = [], PAGE = 1000;
+  for(let from = 0; ; from += PAGE){
+    const { data, error } = await client.from(tabel).select('id,data')
+      .eq('unit_key', unit).order('id').range(from, from + PAGE - 1);
+    if(error) return { error };
+    out.push(...(data || []));
+    if(!data || data.length < PAGE) break;
+  }
+  return { rows: out };
+}
+
+async function muatTabelUnit(u, row){
+  const client = supabaseClientFor(u);
+  const sudah  = !!(row && row.migrated_v38);
+  const res    = await Promise.all(TABEL.map(d => ambilSemuaBaris(client, d.tabel, u)));
+  const gagal  = res.find(r => r.error);
+  if(gagal){
+    console.warn('Tabel data belum siap:', gagal.error.message);
+    state.legacyUnits.add(u);
+    toast('Tabel data belum ada di Supabase (' + gagal.error.message + '). Jalankan SQL v3.8.0. Sementara data disimpan dengan cara lama.', 'error');
+  }
+  TABEL.forEach((d, i) => {
+    const lama = row ? d.lama(row, u).filter(Boolean) : [];
+    lama.forEach(x => { if(!x.id) x.id = uid(); });
+    let items;
+    if(gagal){
+      items = lama;
+    } else {
+      const dariTabel = res[i].rows.map(r => r.data).filter(Boolean);
+      if(sudah){
+        items = dariTabel;
+      } else {
+        const m = new Map();
+        lama.forEach(x => m.set(x.id, x));
+        dariTabel.forEach(x => m.set(x.id, x));
+        items = [...m.values()];
+      }
+      const last = new Map();
+      dariTabel.forEach(x => last.set(x.id, JSON.stringify(x)));
+      SYNC.last[d.tabel + '|' + u] = last;
+    }
+    d.set(u, items);
+  });
+  if(!gagal && !sudah) state.needMigrate.push(u);
+}
+
+async function simpanUnit(u){
+  if(state.legacyUnits && state.legacyUnits.has(u)) return simpanUnitLegacy(u);
+  const client = supabaseClientFor(u);
+  const now = new Date().toISOString();
+
+  for(const d of TABEL){
+    const kunci = d.tabel + '|' + u;
+    const last = SYNC.last[kunci] || (SYNC.last[kunci] = new Map());
+    const cur = new Map();
+    d.get(u).forEach(it => { if(!it.id) it.id = uid(); cur.set(it.id, it); });
+
+    const ubah = [];
+    cur.forEach((it, id) => {
+      const s = JSON.stringify(it);
+      if(last.get(id) !== s) ubah.push({ s, row:{ id, unit_key:u, ...d.kolom(it), data:it, updated_at:now } });
+    });
+    for(let i = 0; i < ubah.length; i += 300){
+      const chunk = ubah.slice(i, i + 300);
+      const { error } = await client.from(d.tabel).upsert(chunk.map(c => c.row), { onConflict:'id' });
+      if(error) throw new Error(d.tabel + ': ' + error.message);
+      chunk.forEach(c => last.set(c.row.id, c.s));
+    }
+
+    const hapus = [...last.keys()].filter(id => !cur.has(id));
+    for(let i = 0; i < hapus.length; i += 100){
+      const ids = hapus.slice(i, i + 100);
+      const { error } = await client.from(d.tabel).delete().eq('unit_key', u).in('id', ids);
+      if(error) throw new Error(d.tabel + ': ' + error.message);
+      ids.forEach(id => last.delete(id));
+    }
+  }
+
+  /* pengaturan unit + penanda migrasi (ditulis setelah semua tabel sukses) */
+  const sStr = JSON.stringify(DB.settings[u] || {});
+  if(SYNC.settings[u] !== sStr){
+    const row = { unit_key:u, settings:DB.settings[u] || {}, migrated_v38:true, updated_at:now };
+    if(!state.appRowAda[u]){
+      Object.assign(row, { years:[], transaksi:[], events:[], event_trans:[], permohonan:[], siswa:[],
+        biaya:{}, pembayaran:[], guru:[], gaji_guru:[], gaji_pembayaran:[] });
+    }
+    const { error } = await client.from('app_units').upsert(row, { onConflict:'unit_key' });
+    if(error) throw new Error('app_units: ' + error.message);
+    state.appRowAda[u] = true;
+    SYNC.settings[u] = sStr;
+  }
+}
+
+/* cara lama (dipakai hanya jika tabel baru belum dibuat di Supabase) */
+async function simpanUnitLegacy(u){
+  const row = {
     unit_key: u,
     settings:         DB.settings[u] || {},
     years:            DB.years[u]    || [],
@@ -552,21 +706,19 @@ function saveDB(){
     gaji_guru:        DB.gajiGuru.filter(g => g.unit === u),
     gaji_pembayaran:  DB.gajiPembayaran.filter(g => g.unit === u),
     updated_at:       new Date().toISOString()
-  }));
+  };
+  const { error } = await supabaseClientFor(u).from('app_units').upsert(row, { onConflict:'unit_key' });
+  if(error) throw new Error(error.message);
+}
 
+let saveQueue = Promise.resolve();
+function saveDB(){
+  const units = state.loadedUnits || [];
+  if(!units.length) return Promise.resolve();
   showSyncStatus('Menyimpan...', 'syncing');
-
   saveQueue = saveQueue.then(async ()=>{
     try{
-      const results = await Promise.all(snapshot.map(row=>{
-        const client = supabaseClientFor(row.unit_key);
-        return client.from('app_units').upsert(row, { onConflict:'unit_key' });
-      }));
-      const errs = results.filter(r => r && r.error);
-      if(errs.length){
-        console.error('Save error detail:', errs.map(e=>e.error));
-        throw new Error(errs[0].error.message);
-      }
+      await Promise.all(units.map(u => simpanUnit(u)));
       showSyncStatus('✓ Tersimpan', 'synced');
     }catch(err){
       console.error('Save gagal:', err);
