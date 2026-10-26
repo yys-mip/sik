@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sistem Laporan Keuangan - Yayasan Mutiara Islam Prembun</title>
-<!-- Versi 3.7: Bukti transaksi (foto/PDF) di semua unit, disimpan di Supabase Storage bucket "bukti-transaksi". Versi 3.6.1 (pesan dikirim di langkah ke-2 setelah PDF): kirim laporan PDF ke donatur via WhatsApp + menu Template Pesan WA -->
+<!-- Versi 3.7.4: teks "Supabase Multi-DB" dihapus dari sidebar. Versi 3.7.3: nomor versi tampil di halaman login & sidebar (otomatis dari APP_VERSION). Versi 3.7.2: batas 50 KB hanya untuk foto (PDF maks 5 MB). Versi 3.7.1: ukuran bukti maks 50 KB (gambar dikompres otomatis). Versi 3.7: Bukti transaksi (foto/PDF) di semua unit, disimpan di Supabase Storage bucket "bukti-transaksi". Versi 3.6.1 (pesan dikirim di langkah ke-2 setelah PDF): kirim laporan PDF ke donatur via WhatsApp + menu Template Pesan WA -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -61,7 +61,7 @@ textarea{resize:vertical;min-height:64px}
 .sb-menu a:hover{background:rgba(255,255,255,.07);color:#fff}
 .sb-menu a.active{background:var(--primary-light);color:#04302d;font-weight:700}
 .sb-menu a .ico{width:18px;text-align:center;font-size:14px}
-.sb-foot{padding:12px;border-top:1px solid rgba(255,255,255,.09);font-size:10.5px;color:#4b7f7a;text-align:center}
+.sb-foot{padding:12px;border-top:1px solid rgba(255,255,255,.09);font-size:11px;color:#7fb5ae;text-align:center}
 #main{margin-left:246px;min-height:100vh;display:flex;flex-direction:column}
 #topbar{background:#fff;border-bottom:1px solid var(--border);padding:12px 22px;display:flex;
   justify-content:space-between;align-items:center;position:sticky;top:0;z-index:40;gap:14px;flex-wrap:wrap}
@@ -254,7 +254,7 @@ body.dark .chip{background:#334155;color:#5eead4;border-color:#475569}
       </div>
       <button class="btn primary" type="submit" id="loginBtn">Masuk</button>
     </form>
-    <div class="login-foot">© Yayasan Mutiara Islam Prembun</div>
+    <div class="login-foot">© Yayasan Mutiara Islam Prembun<br>Versi <strong class="app-ver">3.7.4</strong></div>
   </div>
 </div>
 
@@ -268,7 +268,7 @@ body.dark .chip{background:#334155;color:#5eead4;border-color:#475569}
       </div>
     </div>
     <nav class="sb-menu" id="sbMenu"></nav>
-    <div class="sb-foot">v3.7 &middot; Supabase Multi-DB</div>
+    <div class="sb-foot">Versi <strong class="app-ver">3.7.4</strong></div>
   </aside>
   <div id="main">
     <div id="topbar"></div>
@@ -306,8 +306,10 @@ function supabaseClientFor(unit){
 /* =========================================================
    1. KONSTANTA APLIKASI
    ========================================================= */
-const APP_VERSION = '3.7';
+const APP_VERSION = '3.7.4';
 const GCLIENT_KEY = 'mip_gclient_id';
+function tampilkanVersi(){ document.querySelectorAll('.app-ver').forEach(el => el.textContent = APP_VERSION); document.title = document.title.replace(/\s*\(v[\d.]+\)$/,'') + ' (v' + APP_VERSION + ')'; }
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tampilkanVersi); else tampilkanVersi();
 const DARK_KEY = 'mip_dark_mode';
 
 const UNITS = {
@@ -3061,27 +3063,43 @@ function dataTransFilter(){
    Field di transaksi: buktiPath, buktiUrl, buktiTipe, buktiNama
    ========================================================= */
 const BUKTI_BUCKET = 'bukti-transaksi';
-const BUKTI_MAX_PDF_MB = 5;
-const BUKTI_MAX_IMG_MB = 20;
+const BUKTI_MAX_KB = 50;                 // batas ukuran FOTO bukti (dikompres otomatis)
+const BUKTI_MAX_PDF_MB = 5;              // batas ukuran PDF bukti
+const BUKTI_MAX_BYTES = BUKTI_MAX_KB * 1024;
+const BUKTI_MAX_INPUT_MB = 25;           // batas foto asli sebelum dikompres
 
-function kompresGambar(file, maxDim, q){
-  maxDim = maxDim || 1600; q = q || 0.8;
+function muatGambar(file){
   return new Promise((res, rej)=>{
     const img = new Image();
     const url = URL.createObjectURL(file);
-    img.onload = ()=>{
-      URL.revokeObjectURL(url);
-      const r = Math.min(1, maxDim / Math.max(img.width, img.height));
-      const w = Math.round(img.width*r), h = Math.round(img.height*r);
-      const c = document.createElement('canvas'); c.width = w; c.height = h;
-      const ctx = c.getContext('2d');
-      ctx.fillStyle = '#fff'; ctx.fillRect(0,0,w,h);
-      ctx.drawImage(img, 0, 0, w, h);
-      c.toBlob(b => b ? res(b) : rej(new Error('Gagal memproses gambar')), 'image/jpeg', q);
-    };
+    img.onload = ()=>{ URL.revokeObjectURL(url); res(img); };
     img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error('File gambar tidak dapat dibaca')); };
     img.src = url;
   });
+}
+function gambarKeBlob(img, maxDim, q){
+  const r = Math.min(1, maxDim / Math.max(img.width, img.height));
+  const w = Math.max(1, Math.round(img.width*r)), h = Math.max(1, Math.round(img.height*r));
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,w,h);
+  ctx.drawImage(img, 0, 0, w, h);
+  return new Promise((res, rej)=> c.toBlob(b => b ? res(b) : rej(new Error('Gagal memproses gambar')), 'image/jpeg', q));
+}
+/* Kompres bertahap (dimensi & kualitas diturunkan) sampai <= BUKTI_MAX_BYTES */
+async function kompresGambar(file){
+  const img = await muatGambar(file);
+  const dims = [1280, 1024, 900, 800, 700, 600, 500, 420];
+  const quals = [0.8, 0.7, 0.6, 0.5, 0.4, 0.3];
+  let terakhir = null;
+  for(const d of dims){
+    for(const q of quals){
+      const b = await gambarKeBlob(img, d, q);
+      terakhir = b;
+      if(b.size <= BUKTI_MAX_BYTES) return b;
+    }
+  }
+  throw new Error('Gambar tidak bisa dikompres di bawah '+BUKTI_MAX_KB+' KB (hasil terkecil '+Math.round(terakhir.size/1024)+' KB). Gunakan foto yang lebih sederhana atau crop dulu.');
 }
 function pesanErrorBukti(e){
   const m = (e && e.message) || String(e);
@@ -3095,8 +3113,8 @@ async function uploadBukti(t, file){
   const isPdf = file.type === 'application/pdf';
   const isImg = (file.type||'').startsWith('image/');
   if(!isPdf && !isImg) throw new Error('Format harus gambar (JPG/PNG) atau PDF');
-  if(isPdf && file.size > BUKTI_MAX_PDF_MB*1024*1024) throw new Error('PDF maksimal '+BUKTI_MAX_PDF_MB+' MB');
-  if(isImg && file.size > BUKTI_MAX_IMG_MB*1024*1024) throw new Error('Gambar terlalu besar');
+  if(isPdf && file.size > BUKTI_MAX_PDF_MB*1024*1024) throw new Error('PDF maksimal '+BUKTI_MAX_PDF_MB+' MB (file ini '+(file.size/1048576).toFixed(1)+' MB)');
+  if(isImg && file.size > BUKTI_MAX_INPUT_MB*1024*1024) throw new Error('Foto terlalu besar (maks '+BUKTI_MAX_INPUT_MB+' MB sebelum dikompres)');
   let blob = file, ext = 'pdf', ctype = 'application/pdf';
   if(isImg){ blob = await kompresGambar(file); ext = 'jpg'; ctype = 'image/jpeg'; }
   const path = `${t.unit}/${t.tahun}/${t.id}-${Date.now()}.${ext}`;
@@ -3126,7 +3144,7 @@ function modalBukti(id){
   showModal('Bukti Transaksi', `
     <div class="hint">${fmtTgl(t.tanggal)} · ${esc(t.kategori)} · ${rp(t.jumlah)}${t.keterangan?' · '+esc(t.keterangan):''}</div>
     ${preview}
-    <div class="form-row"><label>${ada?'Ganti bukti':'Unggah bukti'} (JPG/PNG/PDF)</label>
+    <div class="form-row"><label>${ada?'Ganti bukti':'Unggah bukti'} (foto otomatis dikompres ≤ ${BUKTI_MAX_KB} KB; PDF maks ${BUKTI_MAX_PDF_MB} MB)</label>
       <input type="file" id="buktiFile" accept="image/*,application/pdf"></div>
     <div class="form-actions">
       <button class="btn primary" id="btnBuktiSimpan" onclick="simpanBuktiTrans('${id}')">💾 Simpan Bukti</button>
@@ -3278,7 +3296,7 @@ function formTransaksiModal(id){
       <input type="number" id="txJumlah" min="0" value="${t?Number(t.jumlah):''}" required></div>
     <div class="form-row"><label>Keterangan</label>
       <input id="txKeterangan" value="${t?esc(t.keterangan||''):''}"></div>
-    <div class="form-row"><label>Bukti Transaksi (opsional: foto nota/struk/transfer atau PDF)</label>
+    <div class="form-row"><label>Bukti Transaksi (opsional: foto nota/struk/transfer; otomatis dikompres ≤ 50 KB)</label>
       <input type="file" id="txBukti" accept="image/*,application/pdf">
       ${t&&t.buktiUrl?'<div class="hint">Sudah ada bukti. Pilih file baru untuk menggantinya.</div>':''}</div>
     <div class="form-actions">
