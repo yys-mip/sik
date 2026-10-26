@@ -4,9 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sistem Laporan Keuangan - Yayasan Mutiara Islam Prembun</title>
-<!-- Versi 3.4: menambahkan menu Daftar Donatur (user Yayasan) -->
+<!-- Versi 3.7: Bukti transaksi (foto/PDF) di semua unit, disimpan di Supabase Storage bucket "bukti-transaksi". Versi 3.6.1 (pesan dikirim di langkah ke-2 setelah PDF): kirim laporan PDF ke donatur via WhatsApp + menu Template Pesan WA -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{
@@ -224,6 +226,11 @@ body.dark .floating-actions .btn{box-shadow:0 8px 22px rgba(0,0,0,.5)}
 .wa-btn.off{background:#cbd5e1;pointer-events:none}
 .badge.tetap{background:#fef3c7;color:#b45309}
 body.dark .badge.tetap{background:#92400e;color:#fde68a}
+.wa-preview{background:#dcf8c6;color:#111;border-radius:10px;padding:12px 14px;white-space:pre-wrap;font-size:13.5px;line-height:1.5;max-width:520px;border:1px solid #b7e4a0}
+body.dark .wa-preview{background:#1f4d2e;color:#e2e8f0;border-color:#2f6b41}
+.chip-row{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+.chip{border:1px solid var(--border);background:#f1f5f9;color:#0f766e;border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer}
+body.dark .chip{background:#334155;color:#5eead4;border-color:#475569}
 .filter-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .filter-bar input{flex:1;min-width:160px}
 .filter-bar select{width:auto;min-width:150px}
@@ -261,7 +268,7 @@ body.dark .badge.tetap{background:#92400e;color:#fde68a}
       </div>
     </div>
     <nav class="sb-menu" id="sbMenu"></nav>
-    <div class="sb-foot">v3.4 &middot; Supabase Multi-DB</div>
+    <div class="sb-foot">v3.7 &middot; Supabase Multi-DB</div>
   </aside>
   <div id="main">
     <div id="topbar"></div>
@@ -299,7 +306,7 @@ function supabaseClientFor(unit){
 /* =========================================================
    1. KONSTANTA APLIKASI
    ========================================================= */
-const APP_VERSION = '3.4';
+const APP_VERSION = '3.7';
 const GCLIENT_KEY = 'mip_gclient_id';
 const DARK_KEY = 'mip_dark_mode';
 
@@ -366,6 +373,7 @@ function defaultDB(){
     siswa     : [],
     biaya     : { sd:{}, tk:{} },
     pembayaran: [],
+    donatur      : [],
     guru         : [],
     gajiGuru     : [],
     gajiPembayaran: []
@@ -485,7 +493,41 @@ async function loadFromSupabase(unitsToLoad){
     }
   });
 
+  if(unitsToLoad.includes('yayasan')) await loadDonatur();
+
   migrateBiaya(DB);
+}
+
+/* ---- Donatur: tabel Supabase 'donatur' (project 1) ---- */
+function donaturFromRow(r){
+  return { id:r.id, nama:r.nama||'', telp:r.telp||'', tetap:!!r.tetap };
+}
+function donaturToRow(d){
+  return { id:d.id, unit_key:'yayasan', nama:d.nama, telp:d.telp||'', tetap:!!d.tetap, updated_at:new Date().toISOString() };
+}
+async function loadDonatur(){
+  DB.donatur = [];
+  const { data, error } = await sb1.from('donatur').select('*').eq('unit_key','yayasan').order('nama');
+  if(error){
+    console.warn('Load donatur error:', error.message);
+    toast('Tabel donatur belum tersedia di Supabase. Jalankan SQL pembuatan tabel.', 'error');
+    return;
+  }
+  DB.donatur = (data || []).map(donaturFromRow);
+
+  /* migrasi otomatis: data donatur lama (v3.4) yang tersimpan di settings -> tabel */
+  const lama = (DB.settings.yayasan && DB.settings.yayasan.donatur) || [];
+  if(Array.isArray(lama) && lama.length){
+    const ada = new Set(DB.donatur.map(d=>d.id));
+    const baru = lama.filter(d=>!ada.has(d.id));
+    if(baru.length){
+      const { error:e2 } = await sb1.from('donatur').upsert(baru.map(donaturToRow), { onConflict:'id' });
+      if(!e2){ DB.donatur.push(...baru.map(donaturFromRow)); }
+      else { console.warn('Migrasi donatur gagal:', e2.message); return; }
+    }
+    delete DB.settings.yayasan.donatur;
+    saveDB();
+  }
 }
 
 let saveQueue = Promise.resolve();
@@ -778,8 +820,13 @@ function exportExcel(filename, headers, rows){
 /* =========================================================
    CETAK PDF
    ========================================================= */
+let PDF_CAPTURE = null;   /* bila diisi, cetakPDF menyerahkan datanya ke fungsi ini (tanpa membuka jendela cetak) */
 function cetakPDF(title, subtitle, headers, rows, footer, unitOverride, opts){
   opts = opts || {};
+  if(typeof PDF_CAPTURE === 'function'){
+    PDF_CAPTURE({ title, subtitle, headers, rows, footer, unitKey: unitOverride || state.ctxUnit, opts });
+    return;
+  }
   const w = window.open('', '_blank');
   if(!w){ toast('Popup diblokir browser','error'); return; }
 
@@ -916,8 +963,10 @@ function saldoEvent(eventId){
   return s;
 }
 function tambahTransaksi(unit, tahun, tanggal, jenis, kategori, jumlah, keterangan, refId){
-  DB.transaksi.push({ id:uid(), unit, tahun, tanggal, jenis, kategori,
-                      jumlah:Number(jumlah)||0, keterangan:keterangan||'', refId:refId||'' });
+  const t = { id:uid(), unit, tahun, tanggal, jenis, kategori,
+                      jumlah:Number(jumlah)||0, keterangan:keterangan||'', refId:refId||'' };
+  DB.transaksi.push(t);
+  return t;
 }
 function downloadJSON(obj, filename){
   const blob = new Blob([JSON.stringify(obj, null, 2)], {type:'application/json'});
@@ -1065,6 +1114,7 @@ function menusFor(){
   m.push({ id:'event',           label:'Event/Donasi',        ico:'🎉' });
   if(tipe === 'yayasan') m.push({ id:'persetujuan', label:'Persetujuan Anggaran', ico:'✅' });
   if(tipe === 'yayasan' && state.user.role === 'yayasan') m.push({ id:'donatur', label:'Daftar Donatur', ico:'🤝' });
+  if(tipe === 'yayasan' && state.user.role === 'yayasan') m.push({ id:'waTemplate', label:'Template Pesan WA', ico:'💬' });
   else                   m.push({ id:'permohonan',  label:'Permohonan Dana',      ico:'📤' });
   m.push({ id:'laporan',         label:'Laporan',             ico:'📈' });
   return m;
@@ -1139,6 +1189,7 @@ function renderPage(){
     case 'permohonan'  : html = pagePermohonan();  break;
     case 'persetujuan' : html = pagePersetujuan(); break;
     case 'donatur'     : html = pageDonatur();     break;
+    case 'waTemplate'  : html = pageWaTemplate();  break;
     case 'laporan'     : html = pageLaporan();     break;
     case 'laporanKetua': html = pageLaporanKetua(); break;
     case 'laporanMasjid':   html = pageLaporanKeuangan('maba'); break;
@@ -1712,14 +1763,13 @@ function pageGuru(){
 
 /* =========================================================
    DAFTAR DONATUR (khusus user Yayasan)
-   Disimpan di DB.settings.yayasan.donatur (tanpa perubahan skema DB)
+   Disimpan di tabel Supabase 'donatur' (project 1)
    ========================================================= */
 const WA_SVG = '<svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>';
 
 function donaturList(){
-  if(!DB.settings.yayasan) DB.settings.yayasan = {};
-  if(!Array.isArray(DB.settings.yayasan.donatur)) DB.settings.yayasan.donatur = [];
-  return DB.settings.yayasan.donatur;
+  if(!Array.isArray(DB.donatur)) DB.donatur = [];
+  return DB.donatur;
 }
 function normalisasiWA(no){
   let n = String(no||'').replace(/[^\d+]/g,'');
@@ -1728,16 +1778,342 @@ function normalisasiWA(no){
   else if(n.startsWith('8')) n = '62' + n;
   return n.replace(/\D/g,'');
 }
-function pesanLaporanDonatur(d){
-  const y = (DB.settings.yayasan||{});
-  const nm = y.nama || UNITS.yayasan.nama;
-  return `Assalamu'alaikum Warahmatullahi Wabarakatuh,\n\nYth. Bapak/Ibu ${d.nama},\n\nBerikut kami sampaikan laporan keuangan ${nm}. Terima kasih atas dukungan dan kedermawanan Bapak/Ibu. Semoga Allah membalas dengan kebaikan yang berlipat ganda.\n\nWassalamu'alaikum Warahmatullahi Wabarakatuh.\n${nm}`;
+/* ---------- Template pesan WhatsApp ---------- */
+const WA_TEMPLATE_DEFAULT =
+"Assalamu'alaikum Warahmatullahi Wabarakatuh,\n\n" +
+"Yth. Bapak/Ibu {nama},\n\n" +
+"Berikut kami sampaikan {laporan} {yayasan} periode {periode}. " +
+"Terima kasih atas dukungan dan kedermawanan Bapak/Ibu. " +
+"Semoga Allah membalas dengan kebaikan yang berlipat ganda.\n\n" +
+"Wassalamu'alaikum Warahmatullahi Wabarakatuh.\n{yayasan}";
+const WA_PLACEHOLDERS = [
+  ['{nama}','Nama donatur'], ['{laporan}','Jenis laporan'], ['{periode}','Periode laporan'],
+  ['{yayasan}','Nama yayasan'], ['{tanggal}','Tanggal hari ini']
+];
+function getWaTemplate(){
+  const t = DB.settings.yayasan && DB.settings.yayasan.waTemplate;
+  return (typeof t === 'string' && t.trim()) ? t : WA_TEMPLATE_DEFAULT;
+}
+function isiTemplate(tpl, v){
+  return String(tpl).replace(/\{(nama|laporan|periode|yayasan|tanggal)\}/g, (m,k)=> v[k] != null ? v[k] : m);
+}
+function tglHariIni(){
+  const n = new Date(); return `${n.getDate()} ${BULAN[n.getMonth()]} ${n.getFullYear()}`;
+}
+function namaYayasan(){
+  return (DB.settings.yayasan && DB.settings.yayasan.nama) || UNITS.yayasan.nama;
+}
+function labelPeriode(tahun, bulan){
+  return bulan ? `${BULAN[Number(bulan)-1]} ${tahun}` : `Tahun ${tahun}`;
+}
+
+/* ---------- Halaman Template Pesan WA ---------- */
+function pageWaTemplate(){
+  const tpl = getWaTemplate();
+  const chips = WA_PLACEHOLDERS.map(([k,ket])=>
+    `<button type="button" class="chip" title="${esc(ket)}" onclick="sisipPlaceholder('${k}')">${k}</button>`).join('');
+  return `
+    <div class="card">
+      <h3>💬 Template Pesan WhatsApp</h3>
+      <p class="hint" style="margin-top:0">Pesan ini otomatis terisi saat Anda mengirim laporan ke donatur. Isinya masih bisa diubah lagi sebelum dikirim.</p>
+      <div class="form-row"><label>Isi pesan</label>
+        <textarea id="waTplText" rows="12" oninput="previewWaTemplate()">${esc(tpl)}</textarea>
+        <div class="hint">Klik untuk menyisipkan data otomatis di posisi kursor:</div>
+        <div class="chip-row">${chips}</div>
+      </div>
+      <div class="form-row"><label>Pratinjau</label><div id="waTplPreview" class="wa-preview"></div></div>
+      <div class="form-actions">
+        <button class="btn primary" onclick="simpanWaTemplate()">💾 Simpan Template</button>
+        <button class="btn ghost" onclick="resetWaTemplate()">↺ Kembalikan Bawaan</button>
+      </div>
+    </div>`;
+}
+function previewWaTemplate(){
+  const ta = document.getElementById('waTplText'), pv = document.getElementById('waTplPreview');
+  if(!ta || !pv) return;
+  const contoh = donaturList()[0];
+  pv.textContent = isiTemplate(ta.value, {
+    nama: contoh ? contoh.nama : 'Ahmad Fauzi',
+    laporan: 'Laporan Keuangan',
+    periode: labelPeriode(tahunAktif('yayasan'), ''),
+    yayasan: namaYayasan(),
+    tanggal: tglHariIni()
+  });
+}
+function sisipPlaceholder(k){
+  const ta = document.getElementById('waTplText'); if(!ta) return;
+  const a = ta.selectionStart ?? ta.value.length, b = ta.selectionEnd ?? ta.value.length;
+  ta.value = ta.value.slice(0,a) + k + ta.value.slice(b);
+  ta.focus(); ta.selectionStart = ta.selectionEnd = a + k.length;
+  previewWaTemplate();
+}
+function simpanWaTemplate(){
+  const v = document.getElementById('waTplText').value.trim();
+  if(!v){ toast('Isi pesan tidak boleh kosong','error'); return; }
+  if(!DB.settings.yayasan) DB.settings.yayasan = {};
+  DB.settings.yayasan.waTemplate = v;
+  saveDB(); toast('Template tersimpan','ok');
+}
+function resetWaTemplate(){
+  if(!confirm('Kembalikan template ke teks bawaan?')) return;
+  if(DB.settings.yayasan) delete DB.settings.yayasan.waTemplate;
+  saveDB(); toast('Template dikembalikan','ok'); render();
+}
+
+/* ---------- Laporan yang bisa dilampirkan ---------- */
+const LAPORAN_DONATUR = {
+  keuangan : { label:'Laporan Keuangan',        fn:()=>cetakLapKeuangan('yayasan') },
+  aruskas  : { label:'Laporan Arus Kas',        fn:()=>cetakLapKas() },
+  rekap    : { label:'Rekapitulasi Arus Kas',   fn:()=>cetakRekapKas() },
+  kategori : { label:'Rekap per Kategori',      fn:()=>cetakLapKategori() }
+};
+/* Menjalankan fungsi cetak yang sudah ada, tetapi hanya menangkap datanya (tanpa jendela cetak) */
+function ambilDataLaporan(jenis, tahun, bulan){
+  const simpan = { ctx:state.ctxUnit, lkTh:FILTER.lkTh, lkBulan:FILTER.lkBulan, lapTahun:FILTER.lapTahun, lapBulan:FILTER.lapBulan };
+  let hasil = null;
+  state.ctxUnit = 'yayasan';
+  FILTER.lkTh = tahun; FILTER.lkBulan = bulan; FILTER.lapTahun = tahun; FILTER.lapBulan = bulan;
+  PDF_CAPTURE = d => { hasil = d; };
+  try{ LAPORAN_DONATUR[jenis].fn(); }
+  finally{
+    PDF_CAPTURE = null;
+    state.ctxUnit = simpan.ctx;
+    FILTER.lkTh = simpan.lkTh; FILTER.lkBulan = simpan.lkBulan;
+    FILTER.lapTahun = simpan.lapTahun; FILTER.lapBulan = simpan.lapBulan;
+  }
+  return hasil;
+}
+
+/* ---------- Membuat file PDF (jsPDF) ---------- */
+function ukuranGambar(src){
+  return new Promise((res, rej)=>{
+    const im = new Image();
+    im.onload = ()=> res({ w:im.naturalWidth || 1, h:im.naturalHeight || 1 });
+    im.onerror = ()=> rej(new Error('logo tidak terbaca'));
+    im.src = src;
+  });
+}
+async function buatFilePdf(d, filename){
+  if(!(window.jspdf && window.jspdf.jsPDF)) throw new Error('Pustaka PDF belum termuat (cek koneksi internet)');
+  const doc = new window.jspdf.jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
+  if(typeof doc.autoTable !== 'function') throw new Error('Pustaka tabel PDF belum termuat');
+  const W = 210, H = 297, M = 15;
+  const st = DB.settings[d.unitKey] || {};
+  const nama = st.nama || UNITS[d.unitKey].nama;
+  let y = M;
+
+  /* kop surat */
+  if(st.logo){
+    try{
+      const dim = await ukuranGambar(st.logo);
+      const h = 22, w = h * dim.w / dim.h;
+      const fmt = /^data:image\/jpe?g/i.test(st.logo) ? 'JPEG' : 'PNG';
+      doc.addImage(st.logo, fmt, M, y, Math.min(w, 40), h);
+    }catch(e){ console.warn('Logo dilewati:', e); }
+  }
+  const maxW = W - 2*M - 50;
+  doc.setFont('times','bold'); doc.setFontSize(15);
+  const namaLines = doc.splitTextToSize(String(nama).toUpperCase(), maxW);
+  doc.text(namaLines, W/2, y + 7, { align:'center' });
+  let ty = y + 7 + namaLines.length * 6;
+  if(st.alamat){
+    doc.setFont('times','italic'); doc.setFontSize(10);
+    const al = doc.splitTextToSize(String(st.alamat), maxW);
+    doc.text(al, W/2, ty, { align:'center' });
+    ty += al.length * 4.5;
+  }
+  y = Math.max(y + 24, ty) + 2;
+  doc.setDrawColor(0); doc.setLineWidth(.8); doc.line(M, y, W-M, y);
+  doc.setLineWidth(.2); doc.line(M, y+1.3, W-M, y+1.3);
+  y += 9;
+
+  /* judul */
+  doc.setFont('times','bold'); doc.setFontSize(13);
+  doc.text(String(d.title), W/2, y, { align:'center' });
+  const tw = doc.getTextWidth(String(d.title));
+  doc.setLineWidth(.3); doc.line(W/2 - tw/2, y+1.2, W/2 + tw/2, y+1.2);
+  y += 6;
+  if(d.subtitle){
+    doc.setFont('times','normal'); doc.setFontSize(10.5);
+    doc.text(String(d.subtitle), W/2, y, { align:'center' });
+    y += 6;
+  }
+  y += 2;
+
+  /* tabel */
+  const numOnly = t => /^-?Rp\s?[\d.,]+$/i.test(t) || /^-?\d{1,3}(\.\d{3})*(,\d+)?$/.test(t);
+  const noHeader = /^No$/i.test(String(d.headers[0]||''));
+  doc.autoTable({
+    startY: y,
+    head: [d.headers.map(String)],
+    body: d.rows.length
+      ? d.rows.map(r => r.map(c => c == null ? '' : String(c)))
+      : [[{ content:'— Tidak ada data —', colSpan:d.headers.length, styles:{ halign:'center', fontStyle:'italic' } }]],
+    foot: d.footer ? [d.footer.map(c => c == null ? '' : String(c))] : undefined,
+    showFoot: 'lastPage',
+    theme: 'grid',
+    margin: { left:M, right:M },
+    styles: { font:'times', fontSize:9.5, cellPadding:1.8, lineColor:[51,51,51], lineWidth:.2, textColor:0, valign:'top' },
+    headStyles: { fillColor:[230,255,250], textColor:0, fontStyle:'bold', halign:'center' },
+    footStyles: { fillColor:[241,245,249], textColor:0, fontStyle:'bold' },
+    didParseCell: data => {
+      const raw = data.cell.raw;
+      if(typeof raw !== 'string') return;
+      if(data.section === 'body'){
+        if(data.column.index === 0 && noHeader) data.cell.styles.halign = 'center';
+        else if(numOnly(raw)) data.cell.styles.halign = 'right';
+      } else if(data.section === 'foot'){
+        if(/Rp\s?[\d.,]+/i.test(raw)) data.cell.styles.halign = 'right';
+      }
+    }
+  });
+  y = doc.lastAutoTable.finalY + 12;
+
+  /* pengesahan */
+  if(y + 58 > H - M){ doc.addPage(); y = M + 6; }
+  let tglStr;
+  if(d.opts && d.opts.tanggal){
+    const [yy,mm,dd] = String(d.opts.tanggal).split('-');
+    tglStr = `${Number(dd)} ${BULAN[Number(mm)-1]} ${yy}`;
+  } else { tglStr = tglHariIni(); }
+  doc.setFont('times','normal'); doc.setFontSize(11);
+  doc.text(`${(d.opts && d.opts.kota) || 'Prembun'}, ${tglStr}`, W - M - 6, y, { align:'right' });
+  y += 8;
+  const kolom = [
+    { x: M + (W-2*M)*0.25, jab: jabatanPimpinan(d.unitKey) + ',', nm: st.ketua },
+    { x: M + (W-2*M)*0.75, jab: 'Bendahara,',                    nm: st.bendahara }
+  ];
+  kolom.forEach(k=>{
+    doc.setFont('times','bold');   doc.text(k.jab, k.x, y, { align:'center' });
+    doc.setFont('times','italic'); doc.text('ttd', k.x, y + 6, { align:'center' });
+    doc.setLineWidth(.2); doc.line(k.x - 28, y + 26, k.x + 28, y + 26);
+    doc.setFont('times','bold');   doc.text(k.nm || '....................................', k.x, y + 31, { align:'center' });
+  });
+
+  const blob = doc.output('blob');
+  return new File([blob], filename, { type:'application/pdf' });
+}
+function unduhFile(file){
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(file); a.download = file.name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+
+/* ---------- Dialog kirim laporan ke donatur ---------- */
+let __kdAuto = '';
+function kdVars(d){
+  const jenis = document.getElementById('kdJenis').value;
+  const tahun = document.getElementById('kdTahun').value;
+  const bulan = document.getElementById('kdBulan').value;
+  return { jenis, tahun, bulan, v:{
+    nama: d.nama, laporan: LAPORAN_DONATUR[jenis].label, periode: labelPeriode(tahun, bulan),
+    yayasan: namaYayasan(), tanggal: tglHariIni()
+  }};
+}
+function kdRefreshPesan(id){
+  const d = donaturList().find(x=>x.id===id); if(!d) return;
+  const ta = document.getElementById('kdPesan');
+  /* hanya timpa jika pesan belum diubah manual */
+  if(ta.value !== __kdAuto) return;
+  __kdAuto = isiTemplate(getWaTemplate(), kdVars(d).v);
+  ta.value = __kdAuto;
 }
 function kirimLaporanWA(id){
   const d = donaturList().find(x=>x.id===id); if(!d) return;
   const no = normalisasiWA(d.telp);
   if(no.length < 9){ toast('Nomor telepon tidak valid','error'); return; }
-  window.open('https://wa.me/' + no + '?text=' + encodeURIComponent(pesanLaporanDonatur(d)), '_blank');
+  const thList = (DB.years.yayasan || []).map(y=>String(y.tahun));
+  const thAktif = String(tahunAktif('yayasan'));
+  if(!thList.includes(thAktif)) thList.push(thAktif);
+  const optJenis = Object.entries(LAPORAN_DONATUR).map(([k,v])=>`<option value="${k}">${esc(v.label)}</option>`).join('');
+  const optTh = thList.map(t=>`<option value="${esc(t)}" ${t===thAktif?'selected':''}>${esc(t)}</option>`).join('');
+  const optBl = '<option value="">Setahun penuh</option>' + BULAN.map((b,i)=>`<option value="${String(i+1).padStart(2,'0')}">${b}</option>`).join('');
+  showModal('Kirim Laporan ke Donatur', `
+    <div class="form-row"><label>Kepada</label>
+      <div><strong>${esc(d.nama)}</strong> ${d.tetap?'<span class="badge tetap">⭐ Tetap</span>':''}<br><span class="hint">${esc(d.telp)}</span></div></div>
+    <div class="form-row"><label>Laporan</label><select id="kdJenis" onchange="kdRefreshPesan('${id}')">${optJenis}</select></div>
+    <div class="form-row"><label>Tahun</label><select id="kdTahun" onchange="kdRefreshPesan('${id}')">${optTh}</select></div>
+    <div class="form-row"><label>Bulan</label><select id="kdBulan" onchange="kdRefreshPesan('${id}')">${optBl}</select></div>
+    <div class="form-row"><label>Pesan</label><textarea id="kdPesan" rows="9"></textarea>
+      <div class="hint">Isi pesan bisa diubah. Template dasarnya diatur di menu Template Pesan WA.</div></div>
+    <div class="form-row"><label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input id="kdPdf" type="checkbox" style="width:auto" checked> 📎 Lampirkan PDF laporan</label></div>
+    <div class="form-actions">
+      <button class="btn primary" id="kdBtn" onclick="kirimDonatur('${id}')">Kirim via WhatsApp</button>
+      <button class="btn ghost" onclick="closeModal()">Batal</button>
+    </div>`);
+  __kdAuto = '';
+  const ta = document.getElementById('kdPesan');
+  __kdAuto = isiTemplate(getWaTemplate(), kdVars(d).v);
+  ta.value = __kdAuto;
+}
+
+/* Langkah ke-2 setelah PDF dibagikan: kirim teks pesan ke chat donatur yang sama */
+function langkahKirimPesan(id, pesan){
+  const d = donaturList().find(x=>x.id===id); if(!d) { closeModal(); return; }
+  window.__pesanDonatur = pesan;
+  showModal('Kirim Pesan ke ' + d.nama, `
+    <p style="margin-top:0">Jika PDF sudah terkirim tetapi <strong>pesannya tidak ikut</strong>, kirim pesannya sekarang. Tombol di bawah membuka chat WhatsApp <strong>${esc(d.nama)}</strong> dengan pesan sudah terisi.</p>
+    <div class="wa-preview">${esc(pesan)}</div>
+    <div class="form-actions" style="margin-top:12px">
+      <button class="btn primary" onclick="bukaChatDonatur('${id}')">💬 Buka chat &amp; kirim pesan</button>
+      <button class="btn" onclick="salinPesanDonatur()">📋 Salin pesan</button>
+      <button class="btn ghost" onclick="closeModal()">Selesai</button>
+    </div>`);
+}
+function bukaChatDonatur(id){
+  const d = donaturList().find(x=>x.id===id); if(!d) return;
+  window.open('https://wa.me/' + normalisasiWA(d.telp) + '?text=' + encodeURIComponent(window.__pesanDonatur || ''), '_blank');
+}
+async function salinPesanDonatur(){
+  try{ await navigator.clipboard.writeText(window.__pesanDonatur || ''); toast('Pesan disalin','ok'); }
+  catch(_){ toast('Gagal menyalin pesan','error'); }
+}
+async function kirimDonatur(id){
+  const d = donaturList().find(x=>x.id===id); if(!d) return;
+  const no = normalisasiWA(d.telp);
+  const pesan = document.getElementById('kdPesan').value.trim();
+  const pakaiPdf = document.getElementById('kdPdf').checked;
+  const waUrl = 'https://wa.me/' + no + '?text=' + encodeURIComponent(pesan);
+
+  if(!pakaiPdf){ window.open(waUrl, '_blank'); closeModal(); return; }
+
+  const { jenis, tahun, bulan } = kdVars(d);
+  const btn = document.getElementById('kdBtn'); const lbl = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Menyiapkan PDF...';
+  try{
+    const data = ambilDataLaporan(jenis, tahun, bulan);
+    if(!data) throw new Error('Data laporan tidak dapat disiapkan');
+    const nmFile = (LAPORAN_DONATUR[jenis].label + ' ' + labelPeriode(tahun, bulan))
+      .replace(/[^\w]+/g,'-').replace(/^-+|-+$/g,'') + '.pdf';
+    const file = await buatFilePdf(data, nmFile);
+
+    /* HP: menu bagikan (PDF + pesan), pilih WhatsApp lalu kontak donatur */
+    if(navigator.canShare && navigator.canShare({ files:[file] })){
+      try{
+        /* WhatsApp sering membuang teks saat menerima file lewat menu bagikan:
+           salin pesan ke clipboard + sediakan langkah ke-2 (kirim pesan ke chat donatur) */
+        try{ if(navigator.clipboard) await navigator.clipboard.writeText(pesan); }catch(_){}
+        await navigator.share({ files:[file], text:pesan, title:file.name });
+        langkahKirimPesan(id, pesan);
+        return;
+      }catch(e){
+        if(e && e.name === 'AbortError') return;   /* dibatalkan pengguna */
+        console.warn('Share gagal, pakai cadangan:', e);
+      }
+    }
+    /* Cadangan: unduh PDF lalu buka chat WhatsApp donatur */
+    unduhFile(file);
+    const w = window.open(waUrl, '_blank');
+    toast(w ? 'PDF terunduh. Lampirkan lewat ikon klip di WhatsApp.' : 'PDF terunduh. Popup WhatsApp diblokir browser.', w ? 'ok' : 'error');
+    closeModal();
+  }catch(err){
+    console.error(err);
+    toast('Gagal menyiapkan PDF: ' + (err.message || err), 'error');
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = lbl; }
+  }
 }
 
 function pageDonatur(){
@@ -1771,7 +2147,7 @@ function pageDonatur(){
     </div>
     <div class="card">
       <h3>🤝 Daftar Donatur
-        <span class="h3-actions"><button class="btn primary sm" onclick="formDonatur()">➕ Tambah Donatur</button></span>
+        <span class="h3-actions"><button class="btn sm" onclick="go('waTemplate')">💬 Template Pesan</button> <button class="btn primary sm" onclick="formDonatur()">➕ Tambah Donatur</button></span>
       </h3>
       <div class="filter-bar no-print">
         <input type="search" placeholder="Cari nama / nomor telepon..." value="${esc(FILTER.donaturQ||'')}"
@@ -1806,25 +2182,35 @@ function formDonatur(id){
       <button class="btn ghost" onclick="closeModal()">Batal</button>
     </div>`);
 }
-function simpanDonatur(id){
+async function simpanDonatur(id){
   const nama  = document.getElementById('dnNama').value.trim();
   const telp  = document.getElementById('dnTelp').value.trim();
   const tetap = document.getElementById('dnTetap').checked;
   if(!nama){ toast('Nama wajib diisi','error'); return; }
   const list = donaturList();
-  if(id){
-    const d = list.find(x=>x.id===id); if(!d) return;
-    Object.assign(d, { nama, telp, tetap });
-  } else {
-    list.push({ id:uid(), nama, telp, tetap });
+  let d = id ? list.find(x=>x.id===id) : null;
+  const sebelum = d ? { ...d } : null;
+  if(d){ Object.assign(d, { nama, telp, tetap }); }
+  else { d = { id:uid(), nama, telp, tetap }; list.push(d); }
+  showSyncStatus('Menyimpan...', 'syncing');
+  const { error } = await sb1.from('donatur').upsert(donaturToRow(d), { onConflict:'id' });
+  if(error){
+    console.error('Simpan donatur gagal:', error);
+    if(sebelum) Object.assign(d, sebelum); else DB.donatur = list.filter(x=>x.id!==d.id);
+    showSyncStatus('✗ Gagal simpan', 'failed');
+    toast('Gagal simpan donatur: ' + error.message, 'error');
+    return;
   }
-  saveDB(); closeModal(); toast('Donatur tersimpan','ok'); render();
+  showSyncStatus('✓ Tersimpan', 'synced');
+  closeModal(); toast('Donatur tersimpan','ok'); render();
 }
-function hapusDonatur(id){
+async function hapusDonatur(id){
   const d = donaturList().find(x=>x.id===id); if(!d) return;
   if(!confirm(`Hapus donatur "${d.nama}"?`)) return;
-  DB.settings.yayasan.donatur = donaturList().filter(x=>x.id!==id);
-  saveDB(); toast('Dihapus','ok'); render();
+  const { error } = await sb1.from('donatur').delete().eq('id', id);
+  if(error){ toast('Gagal hapus donatur: ' + error.message, 'error'); return; }
+  DB.donatur = donaturList().filter(x=>x.id!==id);
+  toast('Dihapus','ok'); render();
 }
 
 function viewDataGuru(u){
@@ -2668,6 +3054,112 @@ function dataTransFilter(){
   return data.sort((a,b)=> (a.tanggal||'') < (b.tanggal||'') ? -1 : 1);
 }
 
+
+/* =========================================================
+   BUKTI TRANSAKSI (foto/PDF) - Supabase Storage
+   Bucket 'bukti-transaksi' di project masing-masing unit.
+   Field di transaksi: buktiPath, buktiUrl, buktiTipe, buktiNama
+   ========================================================= */
+const BUKTI_BUCKET = 'bukti-transaksi';
+const BUKTI_MAX_PDF_MB = 5;
+const BUKTI_MAX_IMG_MB = 20;
+
+function kompresGambar(file, maxDim, q){
+  maxDim = maxDim || 1600; q = q || 0.8;
+  return new Promise((res, rej)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      URL.revokeObjectURL(url);
+      const r = Math.min(1, maxDim / Math.max(img.width, img.height));
+      const w = Math.round(img.width*r), h = Math.round(img.height*r);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0,0,w,h);
+      ctx.drawImage(img, 0, 0, w, h);
+      c.toBlob(b => b ? res(b) : rej(new Error('Gagal memproses gambar')), 'image/jpeg', q);
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); rej(new Error('File gambar tidak dapat dibaca')); };
+    img.src = url;
+  });
+}
+function pesanErrorBukti(e){
+  const m = (e && e.message) || String(e);
+  if(/bucket not found/i.test(m))
+    return "Bucket 'bukti-transaksi' belum dibuat di Supabase. Jalankan SQL supabase-bukti-transaksi.sql.";
+  if(/row-level security|policy|unauthorized/i.test(m))
+    return 'Izin upload ditolak Supabase. Jalankan ulang SQL supabase-bukti-transaksi.sql.';
+  return m;
+}
+async function uploadBukti(t, file){
+  const isPdf = file.type === 'application/pdf';
+  const isImg = (file.type||'').startsWith('image/');
+  if(!isPdf && !isImg) throw new Error('Format harus gambar (JPG/PNG) atau PDF');
+  if(isPdf && file.size > BUKTI_MAX_PDF_MB*1024*1024) throw new Error('PDF maksimal '+BUKTI_MAX_PDF_MB+' MB');
+  if(isImg && file.size > BUKTI_MAX_IMG_MB*1024*1024) throw new Error('Gambar terlalu besar');
+  let blob = file, ext = 'pdf', ctype = 'application/pdf';
+  if(isImg){ blob = await kompresGambar(file); ext = 'jpg'; ctype = 'image/jpeg'; }
+  const path = `${t.unit}/${t.tahun}/${t.id}-${Date.now()}.${ext}`;
+  const sb = supabaseClientFor(t.unit);
+  const { error } = await sb.storage.from(BUKTI_BUCKET).upload(path, blob, { contentType:ctype, upsert:false });
+  if(error) throw error;
+  const { data } = sb.storage.from(BUKTI_BUCKET).getPublicUrl(path);
+  return { buktiPath:path, buktiUrl:data.publicUrl, buktiTipe:isPdf?'pdf':'image', buktiNama:file.name };
+}
+async function hapusFileBukti(t){
+  if(!t || !t.buktiPath) return;
+  try{ await supabaseClientFor(t.unit).storage.from(BUKTI_BUCKET).remove([t.buktiPath]); }
+  catch(e){ console.warn('Hapus file bukti gagal:', e); }
+}
+function kosongkanBukti(t){
+  delete t.buktiPath; delete t.buktiUrl; delete t.buktiTipe; delete t.buktiNama;
+}
+function modalBukti(id){
+  const t = DB.transaksi.find(x=>x.id===id); if(!t) return;
+  const ada = !!t.buktiUrl;
+  const preview = !ada ? '<div class="empty">Belum ada bukti untuk transaksi ini.</div>'
+    : (t.buktiTipe === 'pdf'
+        ? `<div style="text-align:center;margin:10px 0"><a class="btn sm" href="${esc(t.buktiUrl)}" target="_blank" rel="noopener">📄 Buka PDF</a>
+             <div class="hint">${esc(t.buktiNama||'')}</div></div>`
+        : `<a href="${esc(t.buktiUrl)}" target="_blank" rel="noopener"><img src="${esc(t.buktiUrl)}" alt="Bukti transaksi"
+             style="max-width:100%;max-height:55vh;display:block;margin:10px auto;border-radius:8px"></a>`);
+  showModal('Bukti Transaksi', `
+    <div class="hint">${fmtTgl(t.tanggal)} · ${esc(t.kategori)} · ${rp(t.jumlah)}${t.keterangan?' · '+esc(t.keterangan):''}</div>
+    ${preview}
+    <div class="form-row"><label>${ada?'Ganti bukti':'Unggah bukti'} (JPG/PNG/PDF)</label>
+      <input type="file" id="buktiFile" accept="image/*,application/pdf"></div>
+    <div class="form-actions">
+      <button class="btn primary" id="btnBuktiSimpan" onclick="simpanBuktiTrans('${id}')">💾 Simpan Bukti</button>
+      ${ada?`<button class="btn danger" onclick="hapusBuktiTrans('${id}')">🗑 Hapus Bukti</button>`:''}
+      <button class="btn ghost" onclick="closeModal()">Tutup</button>
+    </div>`);
+}
+async function simpanBuktiTrans(id){
+  const t = DB.transaksi.find(x=>x.id===id); if(!t) return;
+  const f = document.getElementById('buktiFile').files[0];
+  if(!f){ toast('Pilih file bukti dulu','error'); return; }
+  const btn = document.getElementById('btnBuktiSimpan'); btn.disabled = true; btn.textContent = 'Mengunggah...';
+  try{
+    const info = await uploadBukti(t, f);
+    const lama = { unit:t.unit, buktiPath:t.buktiPath };
+    Object.assign(t, info);
+    saveDB();
+    await hapusFileBukti(lama);
+    closeModal(); toast('Bukti tersimpan','ok'); render();
+  }catch(e){
+    console.error(e); btn.disabled = false; btn.textContent = '💾 Simpan Bukti';
+    toast('Gagal unggah bukti: ' + pesanErrorBukti(e), 'error');
+  }
+}
+async function hapusBuktiTrans(id){
+  const t = DB.transaksi.find(x=>x.id===id); if(!t) return;
+  if(!confirm('Hapus bukti transaksi ini?')) return;
+  const lama = { unit:t.unit, buktiPath:t.buktiPath };
+  kosongkanBukti(t); saveDB();
+  await hapusFileBukti(lama);
+  closeModal(); toast('Bukti dihapus','ok'); render();
+}
+
 function pageTransaksi(){
   const u = state.ctxUnit;
 
@@ -2692,6 +3184,9 @@ function pageTransaksi(){
       <td>${esc(t.kategori)}</td>
       <td>${esc(t.keterangan||'-')}</td>
       <td class="r ${t.jenis==='masuk'?'masuk':'keluar'}">${rp(t.jumlah)}</td>
+      <td class="c no-print">${t.buktiUrl
+          ? `<button class="btn xs" title="Lihat bukti" onclick="modalBukti('${t.id}')">📎 Lihat</button>`
+          : `<button class="btn xs ghost" title="Unggah bukti" onclick="modalBukti('${t.id}')">➕ Bukti</button>`}</td>
       <td class="c no-print">
         ${locked
           ? `<span class="lock-badge" title="Transaksi dari pembayaran siswa/gaji. Hapus lewat menu terkait.">🔒 Terkunci</span>`
@@ -2748,11 +3243,11 @@ function pageTransaksi(){
       </span>
     </h3>
     ${data.length ? `<div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Jenis</th><th>Kategori</th><th>Keterangan</th><th class="r">Jumlah</th><th class="c no-print">Aksi</th></tr></thead>
+      <thead><tr><th class="c" style="width:40px">No</th><th>Tgl</th><th>Jenis</th><th>Kategori</th><th>Keterangan</th><th class="r">Jumlah</th><th class="c no-print">Bukti</th><th class="c no-print">Aksi</th></tr></thead>
       <tbody>${rows}
-        <tr class="tot-row"><td colspan="5">TOTAL PEMASUKAN</td><td class="r masuk">${rp(tm)}</td><td class="no-print"></td></tr>
-        <tr class="tot-row"><td colspan="5">TOTAL PENGELUARAN</td><td class="r keluar">${rp(tk)}</td><td class="no-print"></td></tr>
-        <tr class="tot-row"><td colspan="5">SALDO PERIODE</td><td class="r">${rp(tm-tk)}</td><td class="no-print"></td></tr>
+        <tr class="tot-row"><td colspan="5">TOTAL PEMASUKAN</td><td class="r masuk">${rp(tm)}</td><td class="no-print"></td><td class="no-print"></td></tr>
+        <tr class="tot-row"><td colspan="5">TOTAL PENGELUARAN</td><td class="r keluar">${rp(tk)}</td><td class="no-print"></td><td class="no-print"></td></tr>
+        <tr class="tot-row"><td colspan="5">SALDO PERIODE</td><td class="r">${rp(tm-tk)}</td><td class="no-print"></td><td class="no-print"></td></tr>
       </tbody></table></div>`
       : `<div class="empty">Tidak ada.</div>`}
   </div>`;
@@ -2783,6 +3278,9 @@ function formTransaksiModal(id){
       <input type="number" id="txJumlah" min="0" value="${t?Number(t.jumlah):''}" required></div>
     <div class="form-row"><label>Keterangan</label>
       <input id="txKeterangan" value="${t?esc(t.keterangan||''):''}"></div>
+    <div class="form-row"><label>Bukti Transaksi (opsional: foto nota/struk/transfer atau PDF)</label>
+      <input type="file" id="txBukti" accept="image/*,application/pdf">
+      ${t&&t.buktiUrl?'<div class="hint">Sudah ada bukti. Pilih file baru untuk menggantinya.</div>':''}</div>
     <div class="form-actions">
       <button class="btn primary" onclick="simpanTransaksi('${id||''}')">💾 Simpan</button>
       <button class="btn ghost" onclick="closeModal()">Batal</button>
@@ -2814,13 +3312,14 @@ function updateKategoriOptions(){
   sel.innerHTML = '<option value="">-- Pilih Kategori --</option>' +
     opts.map(o=>`<option value="${esc(o)}" ${o===cur?'selected':''}>${esc(o)}</option>`).join('');
 }
-function simpanTransaksi(id){
+async function simpanTransaksi(id){
   const u = state.ctxUnit;
   const tanggal = document.getElementById('txTanggal').value;
   const jenis = document.getElementById('txJenis').value;
   const kategori = document.getElementById('txKategori').value;
   const jumlah = Number(document.getElementById('txJumlah').value);
   const ket = document.getElementById('txKeterangan').value.trim();
+  const fileBukti = document.getElementById('txBukti').files[0] || null;
 
   if(!tanggal){ toast('Tanggal wajib','error'); return; }
   if(!kategori){ toast('Pilih kategori','error'); return; }
@@ -2832,18 +3331,31 @@ function simpanTransaksi(id){
     DB.years[u].push({ id:uid(), tahun, saldoAwal:0, aktif:false });
   }
 
+  let t;
   if(id){
-    const t = DB.transaksi.find(x=>x.id===id);
+    t = DB.transaksi.find(x=>x.id===id);
     if(!t){ toast('Tidak ditemukan','error'); return; }
     if(t.refId){ toast('Transaksi terkunci','error'); return; }
     t.tanggal = tanggal; t.tahun = tahun; t.jenis = jenis;
     t.kategori = kategori; t.jumlah = jumlah; t.keterangan = ket;
-    toast('Diperbarui','ok');
   } else {
-    tambahTransaksi(u, tahun, tanggal, jenis, kategori, jumlah, ket);
-    toast('Disimpan','ok');
+    t = tambahTransaksi(u, tahun, tanggal, jenis, kategori, jumlah, ket);
   }
-  saveDB(); closeModal(); render();
+
+  let pesan = id ? 'Diperbarui' : 'Disimpan', tipe = 'ok';
+  if(fileBukti){
+    showSyncStatus('Mengunggah bukti...', 'syncing');
+    try{
+      const lama = { unit:t.unit, buktiPath:t.buktiPath };
+      Object.assign(t, await uploadBukti(t, fileBukti));
+      await hapusFileBukti(lama);
+    }catch(e){
+      console.error(e);
+      pesan = 'Transaksi tersimpan, tetapi bukti gagal diunggah: ' + pesanErrorBukti(e) + ' (lampirkan ulang lewat tombol Bukti)';
+      tipe = 'error';
+    }
+  }
+  saveDB(); closeModal(); toast(pesan, tipe); render();
 }
 function hapusTrans(id){
   const t = DB.transaksi.find(x=>x.id===id);
@@ -2855,11 +3367,12 @@ function hapusTrans(id){
   if(!confirm('Hapus transaksi?')) return;
   DB.transaksi = DB.transaksi.filter(x=>x.id!==id);
   saveDB(); toast('Dihapus','ok'); render();
+  hapusFileBukti(t);
 }
 function expTrans(){
   const data = dataTransFilter();
-  exportExcel('transaksi_'+state.ctxUnit, ['No','Tanggal','Jenis','Kategori','Keterangan','Jumlah'],
-    data.map((t,i)=>[i+1, fmtTgl(t.tanggal), t.jenis==='masuk'?'Masuk':'Keluar', t.kategori, t.keterangan||'', Number(t.jumlah)]));
+  exportExcel('transaksi_'+state.ctxUnit, ['No','Tanggal','Jenis','Kategori','Keterangan','Jumlah','Link Bukti'],
+    data.map((t,i)=>[i+1, fmtTgl(t.tanggal), t.jenis==='masuk'?'Masuk':'Keluar', t.kategori, t.keterangan||'', Number(t.jumlah), t.buktiUrl||'']));
 }
 function cetakTrans(){
   const u = state.ctxUnit;
