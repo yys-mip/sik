@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sistem Laporan Keuangan - Yayasan Mutiara Islam Prembun</title>
-<!-- Versi 3.8.0: setiap jenis data (transaksi, event, siswa, pembayaran, guru, gaji, tahun, biaya) disimpan di tabel sendiri di semua unit; jalankan supabase-tabel-terpisah.sql. Versi 3.7.4: teks "Supabase Multi-DB" dihapus dari sidebar. Versi 3.7.3: nomor versi tampil di halaman login & sidebar (otomatis dari APP_VERSION). Versi 3.7.2: batas 50 KB hanya untuk foto (PDF maks 5 MB). Versi 3.7.1: ukuran bukti maks 50 KB (gambar dikompres otomatis). Versi 3.7: Bukti transaksi (foto/PDF) di semua unit, disimpan di Supabase Storage bucket "bukti-transaksi". Versi 3.6.1 (pesan dikirim di langkah ke-2 setelah PDF): kirim laporan PDF ke donatur via WhatsApp + menu Template Pesan WA -->
+<!-- Versi 3.8.1: setiap jenis data disimpan di tabel sendiri PER UNIT (mis. transaksi_sd, siswa_tk); jalankan supabase-project1-yayasan-maba.sql / supabase-project2-sd-tk.sql. Versi 3.7.4: teks "Supabase Multi-DB" dihapus dari sidebar. Versi 3.7.3: nomor versi tampil di halaman login & sidebar (otomatis dari APP_VERSION). Versi 3.7.2: batas 50 KB hanya untuk foto (PDF maks 5 MB). Versi 3.7.1: ukuran bukti maks 50 KB (gambar dikompres otomatis). Versi 3.7: Bukti transaksi (foto/PDF) di semua unit, disimpan di Supabase Storage bucket "bukti-transaksi". Versi 3.6.1 (pesan dikirim di langkah ke-2 setelah PDF): kirim laporan PDF ke donatur via WhatsApp + menu Template Pesan WA -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -254,7 +254,7 @@ body.dark .chip{background:#334155;color:#5eead4;border-color:#475569}
       </div>
       <button class="btn primary" type="submit" id="loginBtn">Masuk</button>
     </form>
-    <div class="login-foot">© Yayasan Mutiara Islam Prembun<br>Versi <strong class="app-ver">3.8.0</strong></div>
+    <div class="login-foot">© Yayasan Mutiara Islam Prembun<br>Versi <strong class="app-ver">3.8.1</strong></div>
   </div>
 </div>
 
@@ -268,7 +268,7 @@ body.dark .chip{background:#334155;color:#5eead4;border-color:#475569}
       </div>
     </div>
     <nav class="sb-menu" id="sbMenu"></nav>
-    <div class="sb-foot">Versi <strong class="app-ver">3.8.0</strong></div>
+    <div class="sb-foot">Versi <strong class="app-ver">3.8.1</strong></div>
   </aside>
   <div id="main">
     <div id="topbar"></div>
@@ -306,7 +306,7 @@ function supabaseClientFor(unit){
 /* =========================================================
    1. KONSTANTA APLIKASI
    ========================================================= */
-const APP_VERSION = '3.8.0';
+const APP_VERSION = '3.8.1';
 const GCLIENT_KEY = 'mip_gclient_id';
 function tampilkanVersi(){ document.querySelectorAll('.app-ver').forEach(el => el.textContent = APP_VERSION); document.title = document.title.replace(/\s*\(v[\d.]+\)$/,'') + ' (v' + APP_VERSION + ')'; }
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tampilkanVersi); else tampilkanVersi();
@@ -495,7 +495,7 @@ async function loadFromSupabase(unitsToLoad){
 
   migrateBiaya(DB);
 
-  /* v3.8.0: pindahkan data lama (JSON di app_units) ke tabel terpisah, otomatis sekali per unit */
+  /* v3.8.1: pindahkan data lama (JSON di app_units) ke tabel terpisah, otomatis sekali per unit */
   if(state.needMigrate.length){
     showSyncStatus('Memindahkan data ke tabel terpisah...', 'syncing');
     await saveDB();
@@ -537,13 +537,15 @@ async function loadDonatur(){
 /* =========================================================
    v3.8.0: SETIAP JENIS DATA DISIMPAN DI TABEL SENDIRI
    (berlaku untuk semua unit: yayasan, maba -> project 1; sd, tk -> project 2)
-   Tabel: transaksi, events, event_trans, permohonan, siswa, pembayaran,
+   Tabel per unit (nama_unit), mis. transaksi_sd: transaksi, events, event_trans, permohonan, siswa, pembayaran,
           guru, gaji_guru, gaji_pembayaran, tahun_ajaran, komponen_biaya
    Pengaturan unit (nama, alamat, logo, dst) tetap di app_units.settings
    ========================================================= */
 const SYNC = { last:{}, settings:{} };
 const S_ = v => (v === undefined || v === null) ? null : String(v);
 const N_ = v => Number(v) || 0;
+/* v3.8.1: tabel dipisah per unit, contoh: transaksi_sd, siswa_tk, events_yayasan */
+const namaTabel = (d, u) => d.tabel + '_' + u;
 
 function defFlat(tabel, dbKey, unitOf, kolom){
   return {
@@ -610,7 +612,7 @@ async function ambilSemuaBaris(client, tabel, unit){
 async function muatTabelUnit(u, row){
   const client = supabaseClientFor(u);
   const sudah  = !!(row && row.migrated_v38);
-  const res    = await Promise.all(TABEL.map(d => ambilSemuaBaris(client, d.tabel, u)));
+  const res    = await Promise.all(TABEL.map(d => ambilSemuaBaris(client, namaTabel(d, u), u)));
   const gagal  = res.find(r => r.error);
   if(gagal){
     console.warn('Tabel data belum siap:', gagal.error.message);
@@ -660,16 +662,16 @@ async function simpanUnit(u){
     });
     for(let i = 0; i < ubah.length; i += 300){
       const chunk = ubah.slice(i, i + 300);
-      const { error } = await client.from(d.tabel).upsert(chunk.map(c => c.row), { onConflict:'id' });
-      if(error) throw new Error(d.tabel + ': ' + error.message);
+      const { error } = await client.from(namaTabel(d, u)).upsert(chunk.map(c => c.row), { onConflict:'id' });
+      if(error) throw new Error(namaTabel(d, u) + ': ' + error.message);
       chunk.forEach(c => last.set(c.row.id, c.s));
     }
 
     const hapus = [...last.keys()].filter(id => !cur.has(id));
     for(let i = 0; i < hapus.length; i += 100){
       const ids = hapus.slice(i, i + 100);
-      const { error } = await client.from(d.tabel).delete().eq('unit_key', u).in('id', ids);
-      if(error) throw new Error(d.tabel + ': ' + error.message);
+      const { error } = await client.from(namaTabel(d, u)).delete().eq('unit_key', u).in('id', ids);
+      if(error) throw new Error(namaTabel(d, u) + ': ' + error.message);
       ids.forEach(id => last.delete(id));
     }
   }
